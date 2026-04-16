@@ -1,0 +1,23 @@
+name: Daily New User Report — UK
+
+on:
+  schedule:
+    - cron: '0 11 * * *'  # 12pm London (BST). Drifts to 1pm during GMT (Oct–Mar).
+  workflow_dispatch:
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -r requirements.txt
+      - name: Run daily Intercom report (UK)
+        env:
+          INTERCOM_ACCESS_TOKEN: ${{ secrets.INTERCOM_ACCESS_TOKEN }}
+          HUBSPOT_ACCESS_TOKEN: ${{ secrets.HUBSPOT_ACCESS_TOKEN }}
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          REGION: UK
+        run: python scripts/daily_intercom_report.py
