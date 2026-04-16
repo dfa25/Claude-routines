@@ -2,7 +2,7 @@ name: Daily New User Report
 
 on:
   schedule:
-    - cron: '0 23 * * *'  # 9am AEST daily
+    - cron: '0 3 * * *'  # 9am AEST daily
   workflow_dispatch:       # Allows manual trigger from GitHub UI
 
 jobs:
