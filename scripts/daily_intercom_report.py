@@ -3,10 +3,10 @@ import requests
 from datetime import datetime, timezone, timedelta
 
 # ── Slack channels ────────────────────────────────────────────────────────────
-PUB_AU_CHANNEL = 'C090Z7R8516'  # #mediaowner-login-activity-anz
-PUB_UK_CHANNEL = 'C09LCBRPJSK'  # #mediaowner-login-activity-uk
-ADV_AU_CHANNEL = 'C0ATC9AHKN0'  # #advertiser-activity-au
-ADV_UK_CHANNEL = 'C0AU2VB9VNU'  # #advertiser-activity-uk
+PUB_AU_CHANNEL = 'C090Z7R8516'   # #mediaowner-login-activity-anz
+PUB_UK_CHANNEL = 'C09LCBRPJSK'   # #mediaowner-login-activity-uk
+ADV_AU_CHANNEL = 'C0ATC9AHKN0'   # #advertiser-activity-au
+ADV_UK_CHANNEL = 'C0AU2VB9VNU'   # #advertiser-activity-uk
 
 # ── HubSpot owner IDs for the UK team (fallback when country fields are empty) ─
 UK_OWNER_IDS = {
@@ -17,33 +17,56 @@ UK_OWNER_IDS = {
     358889938,  # Madeleine Spicer
 }
 
+# ── Owner-based fallback for region (AU-focused owners) ──────────────────────
+AU_OWNER_IDS = {
+    79378340,    # Jade Scales (AU Advertiser)
+    358889920,   # Daniel Walsh (AU Advertiser)
+    358889921,   # Daniel Briggs (AU Advertiser)
+    358889919,   # Claire Hansen (AU Advertiser)
+    358889939,   # Senna Spear (AU Advertiser)
+    358889918,   # Chloe Patterson (AU Publisher)
+    # Cindy is AU+UK — excluded (region-ambiguous).
+}
+
+# ── Owner-based fallback for type (only used when pipelines are empty) ───────
+PUBLISHER_OWNER_IDS = {
+    358889918,   # Chloe Patterson (AU Publisher)
+    75429652,    # Cindy Alexandra (AU+UK Publisher)
+}
+ADVERTISER_OWNER_IDS = {
+    79378340,    # Jade Scales
+    358889920,   # Daniel Walsh
+    358889921,   # Daniel Briggs
+    358889919,   # Claire Hansen
+    358889939,   # Senna Spear
+}
+
 # ── HubSpot deal pipeline IDs ────────────────────────────────────────────────
-# Fill these in with the actual pipeline IDs from your HubSpot account.
-# To find: HubSpot → Settings → Objects → Deals → Pipelines → click pipeline → copy ID from URL
 PUBLISHER_PIPELINES = {
-    # 'pipeline_id_collab_platform_packages',
-    # 'pipeline_id_onboarding',
-    # 'pipeline_id_engagement',
-    # 'pipeline_id_pub_saas',
-    # 'pipeline_id_amp_plus',
-    # 'pipeline_id_saas_cs',
+    '930919882',   # Pub SaaS
+    '930940349',   # AmpPlus
+    '1029225915',  # SaaS CS Pipeline
+    '1287994873',  # Collab Platform Packages Pipeline
+    '1288049116',  # Collab Platform Onboarding Pipeline
+    '1288861176',  # Collab Platform Engagement Pipeline
 }
 ADVERTISER_PIPELINES = {
-    # 'pipeline_id_au_agency_private',
-    # 'pipeline_id_agency_saas',
-    # 'pipeline_id_collab_platform_advertiser',
-    # 'pipeline_id_media_pipeline',
-    # 'pipeline_id_payment_schedules',
+    'default',                              # Media Pipeline
+    '956610025',                            # Agency SaaS
+    '942157253',                            # Payment Schedules
+    '1292285397',                           # AU Agency Private Platform Engagement Pipeline
+    't_ecaa8c5142c3c35eb072b4cff1cdb2f8',   # AU Collab Platform - Advertiser Pipeline
 }
 
 # ── Country value sets (lowercase) ───────────────────────────────────────────
 AU_VALUES = {'australia', 'au', 'anz', 'aus'}
 UK_VALUES = {'united kingdom', 'uk', 'gb', 'great britain', 'england', 'scotland', 'wales'}
 
-# ── API credentials ───────────────────────────────────────────────────────────
+# ── API credentials + region filter ──────────────────────────────────────────
 INTERCOM_TOKEN = os.environ['INTERCOM_ACCESS_TOKEN']
 HUBSPOT_TOKEN  = os.environ['HUBSPOT_ACCESS_TOKEN']
 SLACK_TOKEN    = os.environ['SLACK_BOT_TOKEN']
+TARGET_REGION  = os.environ.get('REGION', 'ALL').upper()  # 'AU', 'UK', or 'ALL'
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -203,8 +226,11 @@ def classify_region(company):
     owner_id = company.get('owner_id')
     if owner_id:
         try:
-            if int(owner_id) in UK_OWNER_IDS:
+            oid = int(owner_id)
+            if oid in UK_OWNER_IDS:
                 return 'UK'
+            if oid in AU_OWNER_IDS:
+                return 'AU'
         except (ValueError, TypeError):
             pass
 
@@ -232,6 +258,18 @@ def classify_type(company):
     client_type = company.get('client_type')
     if client_type and client_type != 'Direct':
         return 'Advertiser'
+
+    # Owner-based fallback (only kicks in when pipeline + publisher_size + client_type all gave nothing)
+    owner_id = company.get('owner_id')
+    if owner_id:
+        try:
+            oid = int(owner_id)
+            if oid in PUBLISHER_OWNER_IDS:
+                return 'Publisher'
+            if oid in ADVERTISER_OWNER_IDS:
+                return 'Advertiser'
+        except (ValueError, TypeError):
+            pass
 
     return 'Unknown'
 
@@ -280,6 +318,7 @@ def fmt_ts(ts):
 # ─────────────────────────────────────────────────────────────────────────────
 
 def main():
+    print(f'Region filter: {TARGET_REGION}')
     print('Fetching new Intercom contacts (last 24 hours)...')
     contacts = get_new_intercom_contacts()
     print(f'Found {len(contacts)} new contact(s)')
@@ -321,12 +360,15 @@ def main():
             print(f'  - {c["name"]} ({c["email"]}) | {c["company_name"]} | region={c["region"]} type={c["type"]}')
 
     jobs = [
-        (pub_au, PUB_AU_CHANNEL, 'ANZ',  'Publisher',  '\U0001f1e6\U0001f1fa'),
-        (pub_uk, PUB_UK_CHANNEL, 'UK',   'Publisher',  '\U0001f1ec\U0001f1e7'),
-        (adv_au, ADV_AU_CHANNEL, 'ANZ',  'Advertiser', '\U0001f1e6\U0001f1fa'),
-        (adv_uk, ADV_UK_CHANNEL, 'UK',   'Advertiser', '\U0001f1ec\U0001f1e7'),
+        (pub_au, PUB_AU_CHANNEL, 'ANZ', 'Publisher',  '\U0001f1e6\U0001f1fa', 'AU'),
+        (pub_uk, PUB_UK_CHANNEL, 'UK',  'Publisher',  '\U0001f1ec\U0001f1e7', 'UK'),
+        (adv_au, ADV_AU_CHANNEL, 'ANZ', 'Advertiser', '\U0001f1e6\U0001f1fa', 'AU'),
+        (adv_uk, ADV_UK_CHANNEL, 'UK',  'Advertiser', '\U0001f1ec\U0001f1e7', 'UK'),
     ]
-    for bucket, channel, region_label, type_label, flag in jobs:
+    for bucket, channel, region_label, type_label, flag, region_code in jobs:
+        if TARGET_REGION != 'ALL' and TARGET_REGION != region_code:
+            print(f'Skipping {type_label} {region_label} (region filter = {TARGET_REGION})')
+            continue
         if bucket:
             post_to_slack(channel, format_message(bucket, region_label, type_label, flag))
             print(f'Posted {len(bucket)} {type_label} {region_label} contact(s) to Slack')
