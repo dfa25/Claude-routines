@@ -84,8 +84,10 @@ TARGET_REGION  = os.environ.get('REGION', 'ALL').upper()  # 'AU', 'UK', or 'ALL'
 # Intercom
 # ─────────────────────────────────────────────────────────────────────────────
 
-def get_new_intercom_contacts():
-    """Return contacts whose created_at (first seen) is within the last 24 hours."""
+def get_active_intercom_contacts():
+    """Return contacts whose last_seen_at is within the last 24 hours.
+    Intercom returns one record per contact (most recent last_seen_at), so
+    each person appears once per digest."""
     cutoff = int((datetime.now(timezone.utc) - timedelta(hours=24)).timestamp())
 
     url = 'https://api.intercom.io/contacts/search'
@@ -98,7 +100,7 @@ def get_new_intercom_contacts():
     body = {
         'query': {
             'operator': 'AND',
-            'value': [{'field': 'created_at', 'operator': '>', 'value': cutoff}],
+            'value': [{'field': 'last_seen_at', 'operator': '>', 'value': cutoff}],
         },
         'pagination': {'per_page': 150},
     }
@@ -321,13 +323,13 @@ def classify_type(company):
 def format_message(contacts, region_label, type_label, flag):
     today = datetime.now(timezone.utc).strftime('%d %b %Y')
     lines = [
-        f"{flag} *New {type_label} Logins \u2013 Last 24 Hours ({region_label})* \u2502 {today}",
+        f"{flag} *{type_label} Logins \u2013 Last 24 Hours ({region_label})* \u2502 {today}",
         '\u2500' * 44,
     ]
     for c in contacts:
         lines.append(f"\u2022 *{c['name']}* \u2502 {c['email']}")
-        lines.append(f"  Company: {c['company_name']} \u2502 First seen: {c['first_seen_str']}")
-    lines += ['', f"Total: {len(contacts)} new user{'s' if len(contacts) != 1 else ''}"]
+        lines.append(f"  Company: {c['company_name']} \u2502 Last seen: {c['last_seen_str']}")
+    lines += ['', f"Total: {len(contacts)} active user{'s' if len(contacts) != 1 else ''}"]
     return '\n'.join(lines)
 
 
@@ -359,9 +361,9 @@ def fmt_ts(ts):
 
 def main():
     print(f'Region filter: {TARGET_REGION}')
-    print('Fetching new Intercom contacts (last 24 hours)...')
-    contacts = get_new_intercom_contacts()
-    print(f'Found {len(contacts)} new contact(s)')
+    print('Fetching active Intercom contacts (last_seen_at within last 24 hours)...')
+    contacts = get_active_intercom_contacts()
+    print(f'Found {len(contacts)} active contact(s)')
 
     pub_au, pub_uk, adv_au, adv_uk, unknown, skipped = [], [], [], [], [], []
 
@@ -385,7 +387,7 @@ def main():
             'name':         name,
             'email':        email or 'No email',
             'company_name': (company or {}).get('name') or 'No company',
-            'first_seen_str': fmt_ts(c.get('created_at')),
+            'last_seen_str': fmt_ts(c.get('last_seen_at')),
         }
 
         if region == 'AU' and ctype == 'Publisher':
