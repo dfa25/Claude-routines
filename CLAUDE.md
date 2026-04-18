@@ -158,7 +158,8 @@ PHASE 1 — DAILY TRIAGE (Mon–Fri at 09:00 AEST)
 
    Only consider threads where:
    • I'm in the To: or Cc: field
-   • The most recent message is from someone else (not me)
+   • The most recent message is from someone else (not me,
+     and not any of my own email addresses)
    • The thread is in my inbox (not already archived)
 
 3. Filter for "genuinely needs MY response":
@@ -309,16 +310,17 @@ SLACK MCP CONNECTORS IN THIS SESSION.
 
    👍 (:thumbsup:) → SEND AS-IS
    • Find the Gmail thread by Thread ID
-   • Send the drafted reply as a reply to that thread
-     (reply-all if original had multiple recipients,
-     reply to sender only if one-to-one)
+   • Send the drafted reply as an in-thread reply (NOT a
+     new email) — reply-all if original had multiple
+     recipients, reply to sender only if one-to-one
    • Post threaded reply in Slack:
      "✅ Sent to <recipient name>"
 
    🤝 (:handshake:) → SAVE TO GMAIL DRAFTS
    • Find the Gmail thread by Thread ID
-   • Create a Gmail draft as a reply to that thread
-     with the drafted text
+   • Create a Gmail draft as an in-thread reply (NOT a
+     new standalone email) — must be attached to the
+     existing thread so it appears in the same conversation
    • Get the direct link to the draft in Gmail
    • Post threaded reply in Slack:
      "✏️ Draft saved in Gmail — <link to draft>"
