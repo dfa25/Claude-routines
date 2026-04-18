@@ -453,3 +453,5 @@ GLOBAL RULES (EMAIL TRIAGE)
   so reactions and confirmations are scoped correctly.
 - Do NOT send any emails in Phase 1. Only draft and
   post to Slack.
+- All Slack posts go exclusively to #df. Never post to
+  any other channel.
