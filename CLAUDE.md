@@ -158,8 +158,7 @@ PHASE 1 — DAILY TRIAGE (Mon–Fri at 09:00 AEST)
 
    Only consider threads where:
    • I'm in the To: or Cc: field
-   • The most recent message is from someone else (not me,
-     and not any of my own email addresses)
+   • The most recent message is from someone else (not me)
    • The thread is in my inbox (not already archived)
 
 3. Filter for "genuinely needs MY response":
