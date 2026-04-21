@@ -1,0 +1,54 @@
+name: Asana Review
+
+on:
+  schedule:
+    - cron: '0 6 * * 1-5'    # 16:00 AEST Mon–Fri (AEST = UTC+10, no DST)
+  workflow_dispatch:
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install MCP servers
+        run: |
+          npm install -g \
+            @modelcontextprotocol/server-slack \
+            mcp-server-asana
+
+      - name: Get AEST date
+        id: date
+        run: echo "aest_date=$(TZ=Australia/Sydney date '+%A %d %b %Y')" >> $GITHUB_OUTPUT
+
+      - name: Build MCP config
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          ASANA_PAT: ${{ secrets.ASANA_PAT }}
+        run: |
+          jq -n \
+            --arg slack_tok "$SLACK_BOT_TOKEN" \
+            --arg asana_tok "$ASANA_PAT" \
+            '{
+              mcpServers: {
+                slack: {command:"npx",args:["@modelcontextprotocol/server-slack"],env:{SLACK_BOT_TOKEN:$slack_tok}},
+                asana: {command:"npx",args:["mcp-server-asana"],env:{ASANA_ACCESS_TOKEN:$asana_tok}}
+              }
+            }' > /tmp/mcp-config.json
+
+      - name: Run routine
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          claude_args: --mcp-config /tmp/mcp-config.json --max-turns 50
+          prompt: |
+            Today's date in AEST (Sydney, Australia) is ${{ steps.date.outputs.aest_date }}.
+            You are running as a scheduled task at 16:00 AEST.
+
+            Run Phase 1 of the Daily Asana Review routine exactly as defined in CLAUDE.md.
+            Do not create files, commit code, or open pull requests.
+            Execute the routine entirely through the Slack and Asana MCP connectors.
