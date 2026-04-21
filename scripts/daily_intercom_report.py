@@ -65,12 +65,38 @@ UK_VALUES = {'united kingdom', 'uk', 'gb', 'great britain', 'england', 'scotland
 # ── Internal domains to exclude (substring match on domain part) ─────────────
 INTERNAL_DOMAIN_SUBSTRINGS = {'avid'}
 
+# ── Domain hints suggesting a media owner / publisher ───────────────────────
+# Substring match on any dot-separated part of the domain. Used as a
+# tiebreaker when HubSpot has no strong type signal (no deal pipelines,
+# no publisher_size). Keeps false positives down by matching on parts
+# (e.g. "luxitymedia.com" → "luxitymedia" contains "media").
+MEDIA_OWNER_DOMAIN_HINTS = {
+    'media', 'publisher', 'publishing', 'broadcast', 'broadcasting',
+    'newsroom', 'magazine',
+}
+
+# ── client_type values that explicitly indicate an advertiser ───────────────
+# Matched case-insensitively against company.client_type. Narrower than the
+# previous "anything not Direct" rule, which over-classified media owners
+# whose client_type is a non-Direct publisher-side value.
+ADVERTISER_CLIENT_TYPES = {
+    'agency', 'brand', 'advertiser', 'independent agency', 'holding group',
+}
+
 
 def is_internal_email(email):
     if not email or '@' not in email:
         return False
     domain = email.split('@')[-1].lower()
     return any(sub in domain for sub in INTERNAL_DOMAIN_SUBSTRINGS)
+
+
+def domain_suggests_media_owner(email):
+    if not email or '@' not in email:
+        return False
+    domain = email.split('@')[-1].lower()
+    parts = domain.split('.')
+    return any(hint in part for part in parts for hint in MEDIA_OWNER_DOMAIN_HINTS)
 
 
 # ── API credentials + region filter ──────────────────────────────────────────
@@ -279,9 +305,11 @@ def classify_region(company, intercom_country=None):
     return 'Unknown'
 
 
-def classify_type(company):
+def classify_type(company, email=None):
     """Return 'Publisher', 'Advertiser', or 'Unknown'."""
     if not company:
+        if domain_suggests_media_owner(email):
+            return 'Publisher'
         return 'Unknown'
 
     pipelines = company.get('deal_pipelines') or set()
@@ -297,8 +325,15 @@ def classify_type(company):
     if company.get('publisher_size'):
         return 'Publisher'
 
-    client_type = company.get('client_type')
-    if client_type and client_type != 'Direct':
+    # Domain-based publisher hint beats the weaker client_type / owner
+    # fallbacks below — AU sales owners handle both types, so owner ID
+    # alone isn't reliable, and a domain like "luxitymedia.com" is a
+    # strong media-owner signal.
+    if domain_suggests_media_owner(email):
+        return 'Publisher'
+
+    client_type = (company.get('client_type') or '').strip().lower()
+    if client_type in ADVERTISER_CLIENT_TYPES:
         return 'Advertiser'
 
     # Owner-based fallback (only when pipeline + publisher_size + client_type all gave nothing)
@@ -381,7 +416,7 @@ def main():
         company = get_hubspot_company_for_email(email)
         intercom_country = (c.get('location') or {}).get('country')
         region = classify_region(company, intercom_country)
-        ctype  = classify_type(company)
+        ctype  = classify_type(company, email=email)
 
         enriched = {
             'name':         name,
