@@ -9,6 +9,8 @@ by schedule or events.
 |------|---------|---------|--------|
 | Asana Review | Mon–Fri 16:00 AEST + ✏️ in #df | #df | Surface overdue tasks, bulk-execute via reactions |
 | Email Triage | Mon–Fri 09:00 AEST + ✏️ in #df | #df | Scan Gmail, draft replies, action via reactions |
+| Daily Intercom Report | Daily 12:00 AEST / 12:00 BST | 4 activity channels | Post last-24h logins (unique users + total logins) per region/team; persist daily snapshot |
+| Weekly Login Report | Fri 09:00 AEST (AU) · Thu 09:00 BST (UK) | 4 activity channels + 2 Notion DBs | Weekly rollup: users, sessions, new vs returning, org penetration |
 
 ## Two-phase pattern
 
@@ -53,3 +55,20 @@ Each routine lives in its own folder:
 - The repo is the source of truth — edit here, not in Claude
 - Never auto-send or auto-execute without a human reaction
 - When in doubt, surface to Slack and wait — don't act
+
+## Login tracking pipeline
+
+Two scripts, one shared snapshot store:
+
+1. **`scripts/daily_intercom_report.py`** — pulls active Intercom contacts,
+   enriches via HubSpot, posts per-bucket summaries to Slack, and writes a
+   daily snapshot to `data/snapshots/YYYY-MM-DD.json` (committed back to the
+   repo by the workflow).
+2. **`scripts/weekly_login_report.py`** — reads the last 7 snapshots, builds
+   per-user metrics (sessions, days active, new vs returning, last login),
+   rolls up by organisation, upserts rows into two Notion databases
+   (Publisher + Agency), and posts a weekly summary to each of the 4 Slack
+   channels.
+
+Backfill: run either daily workflow with `LOOKBACK_HOURS=720` via
+`workflow_dispatch` to seed a 30-day snapshot before the first Friday run.

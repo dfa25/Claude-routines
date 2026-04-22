@@ -1,0 +1,27 @@
+name: Weekly Login Report — UK
+
+on:
+  schedule:
+    # Thu 9am BST = Thu 08:00 UTC. Drifts to Thu 9am during GMT (Oct–Mar, one hour earlier locally only during overlap).
+    - cron: '0 8 * * 4'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -r requirements.txt
+      - name: Run weekly login report (UK)
+        env:
+          HUBSPOT_ACCESS_TOKEN: ${{ secrets.HUBSPOT_ACCESS_TOKEN }}
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          REGION: UK
+        run: python scripts/weekly_login_report.py

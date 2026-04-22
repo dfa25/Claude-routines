@@ -1,0 +1,27 @@
+name: Weekly Login Report — AU
+
+on:
+  schedule:
+    # Fri 9am AEST = Thu 23:00 UTC. Drifts to Fri 10am during AEDT (Oct–Apr).
+    - cron: '0 23 * * 4'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -r requirements.txt
+      - name: Run weekly login report (AU)
+        env:
+          HUBSPOT_ACCESS_TOKEN: ${{ secrets.HUBSPOT_ACCESS_TOKEN }}
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          REGION: AU
+        run: python scripts/weekly_login_report.py

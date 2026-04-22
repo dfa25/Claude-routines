@@ -1,6 +1,11 @@
+import json
 import os
+from pathlib import Path
+
 import requests
 from datetime import datetime, timezone, timedelta
+
+SNAPSHOT_DIR = Path(__file__).resolve().parent.parent / 'data' / 'snapshots'
 
 # ── Slack channels ────────────────────────────────────────────────────────────
 PUB_AU_CHANNEL = 'C090Z7R8516'   # #mediaowner-login-activity-anz
@@ -78,17 +83,18 @@ INTERCOM_TOKEN = os.environ['INTERCOM_ACCESS_TOKEN']
 HUBSPOT_TOKEN  = os.environ['HUBSPOT_ACCESS_TOKEN']
 SLACK_TOKEN    = os.environ['SLACK_BOT_TOKEN']
 TARGET_REGION  = os.environ.get('REGION', 'ALL').upper()  # 'AU', 'UK', or 'ALL'
+LOOKBACK_HOURS = int(os.environ.get('LOOKBACK_HOURS', '24'))
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Intercom
 # ─────────────────────────────────────────────────────────────────────────────
 
-def get_active_intercom_contacts():
-    """Return contacts whose last_seen_at is within the last 24 hours.
+def get_active_intercom_contacts(hours=24):
+    """Return contacts whose last_seen_at is within the last `hours` hours.
     Intercom returns one record per contact (most recent last_seen_at), so
     each person appears once per digest."""
-    cutoff = int((datetime.now(timezone.utc) - timedelta(hours=24)).timestamp())
+    cutoff = int((datetime.now(timezone.utc) - timedelta(hours=hours)).timestamp())
 
     url = 'https://api.intercom.io/contacts/search'
     headers = {
@@ -157,6 +163,7 @@ def _fetch_company_detail(company_id, fallback_owner_id=None):
                     pipelines.add(p)
 
     return {
+        'id': company_id,
         'name': props.get('name'),
         'country': props.get('country'),
         'market_office_location': props.get('market_office_location'),
@@ -226,7 +233,7 @@ def get_hubspot_company_for_email(email):
         headers={'Authorization': f'Bearer {HUBSPOT_TOKEN}'},
     )
     empty = {
-        'name': None, 'country': None, 'market_office_location': None,
+        'id': None, 'name': None, 'country': None, 'market_office_location': None,
         'owner_id': contact_owner_id, 'publisher_size': None, 'client_type': None,
         'deal_pipelines': set(),
     }
@@ -320,17 +327,64 @@ def classify_type(company):
 # Slack
 # ─────────────────────────────────────────────────────────────────────────────
 
-def format_message(contacts, region_label, type_label, flag):
+def format_message(contacts, region_label, type_label, flag, total_logins):
     today = datetime.now(timezone.utc).strftime('%d %b %Y')
     lines = [
         f"{flag} *{type_label} Logins \u2013 Last 24 Hours ({region_label})* \u2502 {today}",
         '\u2500' * 44,
     ]
     for c in contacts:
+        lt = c.get('logins_today')
+        suffix = f" \u2502 {lt} login{'s' if lt != 1 else ''} today" if lt else ''
         lines.append(f"\u2022 *{c['name']}* \u2502 {c['email']}")
-        lines.append(f"  Company: {c['company_name']} \u2502 Last seen: {c['last_seen_str']}")
-    lines += ['', f"Total: {len(contacts)} active user{'s' if len(contacts) != 1 else ''}"]
+        lines.append(f"  Company: {c['company_name']} \u2502 Last seen: {c['last_seen_str']}{suffix}")
+    unique = len(contacts)
+    lines += [
+        '',
+        f"Unique users: {unique}",
+        f"Total logins: {total_logins}",
+    ]
     return '\n'.join(lines)
+
+
+# --- Snapshots (daily persistence for weekly rollup) ---
+
+def load_previous_snapshot():
+    """Return {email: session_count} from the most recent prior snapshot, or {}."""
+    if not SNAPSHOT_DIR.exists():
+        return {}
+    today = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+    prior = sorted(p for p in SNAPSHOT_DIR.glob('*.json') if p.stem < today)
+    if not prior:
+        return {}
+    try:
+        data = json.loads(prior[-1].read_text())
+    except (OSError, ValueError):
+        return {}
+    return {row['email']: row.get('session_count') or 0 for row in data if row.get('email')}
+
+
+def write_snapshot(rows):
+    """Merge today's contacts into the daily snapshot file, keyed by email."""
+    SNAPSHOT_DIR.mkdir(parents=True, exist_ok=True)
+    today = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+    path = SNAPSHOT_DIR / f'{today}.json'
+
+    existing = {}
+    if path.exists():
+        try:
+            for row in json.loads(path.read_text()):
+                if row.get('email'):
+                    existing[row['email']] = row
+        except (OSError, ValueError):
+            pass
+
+    for row in rows:
+        if row.get('email'):
+            existing[row['email']] = row
+
+    path.write_text(json.dumps(list(existing.values()), indent=2, sort_keys=True))
+    print(f'Wrote snapshot: {path} ({len(existing)} contacts)')
 
 
 def post_to_slack(channel_id, text):
@@ -361,10 +415,12 @@ def fmt_ts(ts):
 
 def main():
     print(f'Region filter: {TARGET_REGION}')
-    print('Fetching active Intercom contacts (last_seen_at within last 24 hours)...')
-    contacts = get_active_intercom_contacts()
+    print(f'Fetching active Intercom contacts (last_seen_at within last {LOOKBACK_HOURS} hours)...')
+    contacts = get_active_intercom_contacts(hours=LOOKBACK_HOURS)
     print(f'Found {len(contacts)} active contact(s)')
 
+    prev_sessions = load_previous_snapshot()
+    snapshot_rows = []
     pub_au, pub_uk, adv_au, adv_uk, unknown, skipped = [], [], [], [], [], []
 
     for c in contacts:
@@ -383,12 +439,37 @@ def main():
         region = classify_region(company, intercom_country)
         ctype  = classify_type(company)
 
+        company_id = None
+        if company:
+            company_id = company.get('id')
+
+        session_count = c.get('session_count') or 0
+        prev = prev_sessions.get(email)
+        if prev is None:
+            # First time we've seen this user in a snapshot — count today as 1 login.
+            logins_today = 1 if session_count else 0
+        else:
+            logins_today = max(session_count - prev, 0)
+
         enriched = {
             'name':         name,
             'email':        email or 'No email',
             'company_name': (company or {}).get('name') or 'No company',
             'last_seen_str': fmt_ts(c.get('last_seen_at')),
+            'logins_today': logins_today,
         }
+
+        snapshot_rows.append({
+            'email':         email,
+            'name':          name,
+            'company_name':  (company or {}).get('name') or 'No company',
+            'company_id':    company_id,
+            'region':        region,
+            'type':          ctype,
+            'last_seen_at':  c.get('last_seen_at'),
+            'created_at':    c.get('created_at'),
+            'session_count': session_count,
+        })
 
         if region == 'AU' and ctype == 'Publisher':
             pub_au.append(enriched)
@@ -400,6 +481,8 @@ def main():
             adv_uk.append(enriched)
         else:
             unknown.append({**enriched, 'region': region, 'type': ctype})
+
+    write_snapshot(snapshot_rows)
 
     print(f'\nPub AU: {len(pub_au)}  Pub UK: {len(pub_uk)}  Adv AU: {len(adv_au)}  Adv UK: {len(adv_uk)}  Unknown: {len(unknown)}  Skipped(internal): {len(skipped)}')
 
@@ -419,8 +502,12 @@ def main():
             print(f'Skipping {type_label} {region_label} (region filter = {TARGET_REGION})')
             continue
         if bucket:
-            post_to_slack(channel, format_message(bucket, region_label, type_label, flag))
-            print(f'Posted {len(bucket)} {type_label} {region_label} contact(s) to Slack')
+            total_logins = sum(c.get('logins_today') or 0 for c in bucket)
+            if LOOKBACK_HOURS == 24:
+                post_to_slack(channel, format_message(bucket, region_label, type_label, flag, total_logins))
+                print(f'Posted {len(bucket)} {type_label} {region_label} contact(s) to Slack (total logins: {total_logins})')
+            else:
+                print(f'Backfill mode ({LOOKBACK_HOURS}h): captured {len(bucket)} {type_label} {region_label} contact(s) to snapshot, skipping Slack post.')
         else:
             print(f'No {type_label} {region_label} contacts \u2014 skipping')
 
