@@ -58,17 +58,81 @@ Each routine lives in its own folder:
 
 ## Login tracking pipeline
 
-Two scripts, one shared snapshot store:
+Two workflows, one shared snapshot store, two destinations.
 
-1. **`scripts/daily_intercom_report.py`** — pulls active Intercom contacts,
-   enriches via HubSpot, posts per-bucket summaries to Slack, and writes a
-   daily snapshot to `data/snapshots/YYYY-MM-DD.json` (committed back to the
-   repo by the workflow).
-2. **`scripts/weekly_login_report.py`** — reads the last 7 snapshots, builds
-   per-user metrics (sessions, days active, new vs returning, last login),
-   rolls up by organisation, upserts rows into two Notion databases
-   (Publisher + Agency), and posts a weekly summary to each of the 4 Slack
-   channels.
+### Schedule
 
-Backfill: run either daily workflow with `LOOKBACK_HOURS=720` via
-`workflow_dispatch` to seed a 30-day snapshot before the first Friday run.
+| Workflow | Cron (UTC) | Local time | Region filter |
+|---|---|---|---|
+| `daily-intercom-report-au.yml` | `0 2 * * *` daily | 12pm Sydney (1pm AEDT) | `REGION=AU` |
+| `daily-intercom-report-uk.yml` | `0 11 * * *` daily | 12pm London (1pm GMT) | `REGION=UK` |
+| `weekly-login-report-au.yml` | `0 23 * * 4` | Fri 9am Sydney (10am AEDT) | `REGION=AU` |
+| `weekly-login-report-uk.yml` | `0 8 * * 4` | Thu 9am London (8am GMT) | `REGION=UK` |
+
+Crons are UTC, so local time drifts ±1h with daylight saving — tolerated.
+
+### Daily flow (runs twice a day — once per region)
+
+1. **Fetch** Intercom contacts whose `last_seen_at` falls in the last
+   `LOOKBACK_HOURS` (default `24`; override via `workflow_dispatch` for
+   backfill).
+2. **Enrich** each contact via HubSpot: company name + id, country/office,
+   deal pipelines → classify `region` (AU/UK/Unknown) and `type`
+   (Publisher/Advertiser/Unknown). Internal emails are skipped.
+3. **Compute `logins_today`** per user = current `session_count` minus the
+   same user's `session_count` in the previous daily snapshot (or `1` if
+   never seen before).
+4. **Write snapshot** to `data/snapshots/YYYY-MM-DD.json`. Both region runs
+   on the same day merge into one file keyed by email. Committed back to
+   `main` by the workflow (`contents: write` permission).
+5. **Post to Slack** — four channels, one per (region × type) bucket:
+   - `#mediaowner-login-activity-anz` — Publishers, AU
+   - `#mediaowner-login-activity-uk` — Publishers, UK
+   - `#advertiser-activity-au` — Advertisers, AU
+   - `#advertiser-activity-uk` — Advertisers, UK
+
+   Each post lists every active user with their login count today and ends
+   with `Unique users: N` + `Total logins: M`. Slack post is skipped when
+   `LOOKBACK_HOURS != 24` (backfill mode).
+
+### Weekly flow (runs once per region, Thu UK / Fri AU)
+
+1. **Load** every snapshot in `data/snapshots/`.
+2. **Build window** = the 7 UTC days ending yesterday. Look back one day
+   further for the baseline `session_count` per user.
+3. **Per-user metrics** for each (region × type) bucket:
+   - `Last login` = max `last_seen_at` in window
+   - `Days active (7d)` = distinct snapshot dates user appears in
+   - `Logins (7d)` = latest `session_count` − baseline `session_count`
+     (flagged "estimated" if baseline missing)
+   - `User type` = `New` if `created_at` inside the window, else `Returning`
+4. **Per-org rollup** grouped by `company_name`:
+   - Active users, new users, returning users
+   - Total sessions split new vs returning
+   - Total users at org via HubSpot associated-contacts count
+   - `Org penetration %` = active / total
+5. **Upsert Notion** — two databases in the "user data" workspace:
+   - Publisher DB: `34a789ce423180c19404f458b5d566c5`
+   - Agency DB: `34a789ce423180b0b670c0971db144df`
+
+   Schema is created idempotently on first run. Rows upserted on
+   `Email + Week of` so re-runs don't duplicate.
+6. **Post to Slack** — same four channels. Header line shows total unique
+   users, total logins split new vs returning, active orgs count.
+   Organisations listed in descending session order with each user
+   underneath.
+
+### Secrets (GitHub → Settings → Secrets → Actions)
+
+- `INTERCOM_ACCESS_TOKEN`
+- `HUBSPOT_ACCESS_TOKEN`
+- `SLACK_BOT_TOKEN`
+- `NOTION_TOKEN` (weekly only; integration must be shared with both Notion DBs)
+
+### Backfill
+
+One-off: Actions tab → **Daily New User Report — AU** (or UK) → **Run
+workflow** → set *Hours of history to pull* to `720` → Run. Seeds the
+snapshot store with everyone seen in the last 30 days and their current
+`session_count`. Gives the next weekly run an accurate baseline instead
+of estimated.
