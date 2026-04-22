@@ -65,12 +65,31 @@ UK_VALUES = {'united kingdom', 'uk', 'gb', 'great britain', 'england', 'scotland
 # ── Internal domains to exclude (substring match on domain part) ─────────────
 INTERNAL_DOMAIN_SUBSTRINGS = {'avid'}
 
+# ── Domain hints suggesting a media owner / publisher ───────────────────────
+# Substring match on any dot-separated part of the domain. Only used as a
+# tiebreaker when client_type is "Direct" or empty (where both media owners
+# and direct brands land). Agencies are caught earlier by the non-Direct
+# client_type check, so e.g. "WPP Media" / "Nunn Media" (client_type =
+# Holding Group / Independent) never reach this hint.
+MEDIA_OWNER_DOMAIN_HINTS = {
+    'media', 'publisher', 'publishing', 'broadcast', 'broadcasting',
+    'newsroom', 'magazine',
+}
+
 
 def is_internal_email(email):
     if not email or '@' not in email:
         return False
     domain = email.split('@')[-1].lower()
     return any(sub in domain for sub in INTERNAL_DOMAIN_SUBSTRINGS)
+
+
+def domain_suggests_media_owner(email):
+    if not email or '@' not in email:
+        return False
+    domain = email.split('@')[-1].lower()
+    parts = domain.split('.')
+    return any(hint in part for part in parts for hint in MEDIA_OWNER_DOMAIN_HINTS)
 
 
 # ── API credentials + region filter ──────────────────────────────────────────
@@ -279,9 +298,11 @@ def classify_region(company, intercom_country=None):
     return 'Unknown'
 
 
-def classify_type(company):
+def classify_type(company, email=None):
     """Return 'Publisher', 'Advertiser', or 'Unknown'."""
     if not company:
+        if domain_suggests_media_owner(email):
+            return 'Publisher'
         return 'Unknown'
 
     pipelines = company.get('deal_pipelines') or set()
@@ -297,9 +318,21 @@ def classify_type(company):
     if company.get('publisher_size'):
         return 'Publisher'
 
-    client_type = company.get('client_type')
-    if client_type and client_type != 'Direct':
+    # HubSpot client_type values: Direct | Independent | Holding Group - X
+    # | Havas | Other (PR, Social, Creative). Everything except "Direct"
+    # means agency → Advertiser. Direct / empty is ambiguous (media owner
+    # OR direct brand) so it falls through to the domain hint below.
+    client_type = (company.get('client_type') or '').strip().lower()
+    if client_type and client_type != 'direct':
         return 'Advertiser'
+
+    # Domain hint for the ambiguous Direct / empty bucket. A domain like
+    # "luxitymedia.com" is a strong media-owner signal; agencies with
+    # "media" in the name were already caught above by client_type, so
+    # they don't reach here. Runs before the owner-based fallback because
+    # AU sales owners handle both advertisers and media owners.
+    if domain_suggests_media_owner(email):
+        return 'Publisher'
 
     # Owner-based fallback (only when pipeline + publisher_size + client_type all gave nothing)
     owner_id = company.get('owner_id')
@@ -381,7 +414,7 @@ def main():
         company = get_hubspot_company_for_email(email)
         intercom_country = (c.get('location') or {}).get('country')
         region = classify_region(company, intercom_country)
-        ctype  = classify_type(company)
+        ctype  = classify_type(company, email=email)
 
         enriched = {
             'name':         name,
