@@ -4,6 +4,11 @@ on:
   schedule:
     - cron: '0 2 * * *'   # 12pm Sydney (AEST). Drifts to 1pm during AEDT (Oct–Apr).
   workflow_dispatch:
+    inputs:
+      lookback_hours:
+        description: 'Hours of history to pull (default 24; use 720 for one-off 30-day backfill)'
+        required: false
+        default: '24'
 
 permissions:
   contents: write
@@ -27,6 +32,7 @@ jobs:
           HUBSPOT_ACCESS_TOKEN: ${{ secrets.HUBSPOT_ACCESS_TOKEN }}
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
           REGION: AU
+          LOOKBACK_HOURS: ${{ github.event.inputs.lookback_hours || '24' }}
         run: python scripts/daily_intercom_report.py
       - name: Commit daily snapshot
         run: |
