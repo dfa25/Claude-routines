@@ -66,21 +66,14 @@ UK_VALUES = {'united kingdom', 'uk', 'gb', 'great britain', 'england', 'scotland
 INTERNAL_DOMAIN_SUBSTRINGS = {'avid'}
 
 # ── Domain hints suggesting a media owner / publisher ───────────────────────
-# Substring match on any dot-separated part of the domain. Used as a
-# tiebreaker when HubSpot has no strong type signal (no deal pipelines,
-# no publisher_size). Keeps false positives down by matching on parts
-# (e.g. "luxitymedia.com" → "luxitymedia" contains "media").
+# Substring match on any dot-separated part of the domain. Only used as a
+# tiebreaker when client_type is "Direct" or empty (where both media owners
+# and direct brands land). Agencies are caught earlier by the non-Direct
+# client_type check, so e.g. "WPP Media" / "Nunn Media" (client_type =
+# Holding Group / Independent) never reach this hint.
 MEDIA_OWNER_DOMAIN_HINTS = {
     'media', 'publisher', 'publishing', 'broadcast', 'broadcasting',
     'newsroom', 'magazine',
-}
-
-# ── client_type values that explicitly indicate an advertiser ───────────────
-# Matched case-insensitively against company.client_type. Narrower than the
-# previous "anything not Direct" rule, which over-classified media owners
-# whose client_type is a non-Direct publisher-side value.
-ADVERTISER_CLIENT_TYPES = {
-    'agency', 'brand', 'advertiser', 'independent agency', 'holding group',
 }
 
 
@@ -325,16 +318,21 @@ def classify_type(company, email=None):
     if company.get('publisher_size'):
         return 'Publisher'
 
-    # Domain-based publisher hint beats the weaker client_type / owner
-    # fallbacks below — AU sales owners handle both types, so owner ID
-    # alone isn't reliable, and a domain like "luxitymedia.com" is a
-    # strong media-owner signal.
+    # HubSpot client_type values: Direct | Independent | Holding Group - X
+    # | Havas | Other (PR, Social, Creative). Everything except "Direct"
+    # means agency → Advertiser. Direct / empty is ambiguous (media owner
+    # OR direct brand) so it falls through to the domain hint below.
+    client_type = (company.get('client_type') or '').strip().lower()
+    if client_type and client_type != 'direct':
+        return 'Advertiser'
+
+    # Domain hint for the ambiguous Direct / empty bucket. A domain like
+    # "luxitymedia.com" is a strong media-owner signal; agencies with
+    # "media" in the name were already caught above by client_type, so
+    # they don't reach here. Runs before the owner-based fallback because
+    # AU sales owners handle both advertisers and media owners.
     if domain_suggests_media_owner(email):
         return 'Publisher'
-
-    client_type = (company.get('client_type') or '').strip().lower()
-    if client_type in ADVERTISER_CLIENT_TYPES:
-        return 'Advertiser'
 
     # Owner-based fallback (only when pipeline + publisher_size + client_type all gave nothing)
     owner_id = company.get('owner_id')
