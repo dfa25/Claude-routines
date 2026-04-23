@@ -446,10 +446,10 @@ def main():
         session_count = c.get('session_count') or 0
         prev = prev_sessions.get(email)
         if prev is None:
-            # First time we've seen this user in a snapshot — count today as 1 login.
-            logins_today = 1 if session_count else 0
+            # Every contact passed the last_seen_at filter, so at least 1 login.
+            logins_today = max(session_count, 1)
         else:
-            logins_today = max(session_count - prev, 0)
+            logins_today = max(session_count - prev, 1)
 
         enriched = {
             'name':         name,
