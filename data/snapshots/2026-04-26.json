@@ -15,10 +15,21 @@
     "company_name": "No company",
     "created_at": 1730811030,
     "email": "avidpubsuite@gmail.com",
-    "last_seen_at": 1777126705,
+    "last_seen_at": 1777196045,
     "name": "Test Admin",
     "region": "Unknown",
     "session_count": 0,
     "type": "Unknown"
+  },
+  {
+    "company_id": "258592885192",
+    "company_name": "Ufurnish-UK",
+    "created_at": 1745991775,
+    "email": "ray@ufurnish.com",
+    "last_seen_at": 1777185491,
+    "name": "Raymond Wright",
+    "region": "UK",
+    "session_count": 0,
+    "type": "Publisher"
   }
 ]
