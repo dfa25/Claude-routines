@@ -1,0 +1,68 @@
+[
+  {
+    "company_id": null,
+    "company_name": "No company",
+    "created_at": 1730811030,
+    "email": "avidpubsuite@gmail.com",
+    "last_seen_at": 1777265890,
+    "name": "Test Admin",
+    "region": "Unknown",
+    "session_count": 0,
+    "type": "Unknown"
+  },
+  {
+    "company_id": "61713495520",
+    "company_name": "Missing Perspectives-AU",
+    "created_at": 1774913571,
+    "email": "alicia@missingperspectives.com",
+    "last_seen_at": 1777262579,
+    "name": "Alicia Vrajlal",
+    "region": "AU",
+    "session_count": 0,
+    "type": "Publisher"
+  },
+  {
+    "company_id": "164552910314",
+    "company_name": "Australian Community Media (ACM)-AU",
+    "created_at": 1739922134,
+    "email": "miranda.aitken@austcommunitymedia.com.au",
+    "last_seen_at": 1777252386,
+    "name": "Miranda Aitken",
+    "region": "AU",
+    "session_count": 0,
+    "type": "Publisher"
+  },
+  {
+    "company_id": "164552910314",
+    "company_name": "Australian Community Media (ACM)-AU",
+    "created_at": 1762731389,
+    "email": "molly.jolly@austcommunitymedia.com.au",
+    "last_seen_at": 1777248391,
+    "name": "Molly Jolly",
+    "region": "AU",
+    "session_count": 0,
+    "type": "Publisher"
+  },
+  {
+    "company_id": "125120465368",
+    "company_name": "Havas Media",
+    "created_at": 1776641438,
+    "email": "begona.loredo@havasmedia.com",
+    "last_seen_at": 1777247921,
+    "name": "Begona Loredo",
+    "region": "AU",
+    "session_count": 0,
+    "type": "Advertiser"
+  },
+  {
+    "company_id": "165334180282",
+    "company_name": "News Pty Limited-AU",
+    "created_at": 1776822521,
+    "email": "esther.wong@news.com.au",
+    "last_seen_at": 1777245858,
+    "name": "Esther wong",
+    "region": "AU",
+    "session_count": 0,
+    "type": "Publisher"
+  }
+]
