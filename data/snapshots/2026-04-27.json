@@ -4,7 +4,7 @@
     "company_name": "No company",
     "created_at": 1730811030,
     "email": "avidpubsuite@gmail.com",
-    "last_seen_at": 1777265890,
+    "last_seen_at": 1777290160,
     "name": "Test Admin",
     "region": "Unknown",
     "session_count": 0,
@@ -37,7 +37,7 @@
     "company_name": "Australian Community Media (ACM)-AU",
     "created_at": 1762731389,
     "email": "molly.jolly@austcommunitymedia.com.au",
-    "last_seen_at": 1777248391,
+    "last_seen_at": 1777269211,
     "name": "Molly Jolly",
     "region": "AU",
     "session_count": 0,
@@ -64,5 +64,93 @@
     "region": "AU",
     "session_count": 0,
     "type": "Publisher"
+  },
+  {
+    "company_id": "61670025675",
+    "company_name": "Finder-UK",
+    "created_at": 1777020736,
+    "email": "nadja.forrest@finder.com",
+    "last_seen_at": 1777290981,
+    "name": "Nadja Forrest",
+    "region": "UK",
+    "session_count": 0,
+    "type": "Publisher"
+  },
+  {
+    "company_id": null,
+    "company_name": "No company",
+    "created_at": 1757051010,
+    "email": "mehrubaig6@gmail.com",
+    "last_seen_at": 1777286595,
+    "name": "Mehrun nisa",
+    "region": "Unknown",
+    "session_count": 0,
+    "type": "Unknown"
+  },
+  {
+    "company_id": "258592885192",
+    "company_name": "Ufurnish-UK",
+    "created_at": 1745991775,
+    "email": "ray@ufurnish.com",
+    "last_seen_at": 1777282181,
+    "name": "Raymond Wright",
+    "region": "UK",
+    "session_count": 0,
+    "type": "Publisher"
+  },
+  {
+    "company_id": null,
+    "company_name": "No company",
+    "created_at": 1776160343,
+    "email": "leahstalks@gmail.com",
+    "last_seen_at": 1777278270,
+    "name": "Leah Test Stalker",
+    "region": "AU",
+    "session_count": 0,
+    "type": "Unknown"
+  },
+  {
+    "company_id": "165334180282",
+    "company_name": "News Pty Limited-AU",
+    "created_at": 1777016582,
+    "email": "sheree.richardson@news.com.au",
+    "last_seen_at": 1777277983,
+    "name": "Sheree Richardson",
+    "region": "AU",
+    "session_count": 0,
+    "type": "Publisher"
+  },
+  {
+    "company_id": null,
+    "company_name": "No company",
+    "created_at": 1764858265,
+    "email": "carl@prosperitymedia.com.au",
+    "last_seen_at": 1777277525,
+    "name": "Carl Borlongan",
+    "region": "Unknown",
+    "session_count": 0,
+    "type": "Unknown"
+  },
+  {
+    "company_id": "142437218790",
+    "company_name": "Digital Box-UK",
+    "created_at": 1773137916,
+    "email": "alex.simpson@digitalbox.com",
+    "last_seen_at": 1777275912,
+    "name": "Alex Simpson",
+    "region": "UK",
+    "session_count": 0,
+    "type": "Publisher"
+  },
+  {
+    "company_id": null,
+    "company_name": "No company",
+    "created_at": 1731059101,
+    "email": "ahmadshafi749@gmail.com",
+    "last_seen_at": 1777272982,
+    "name": "Demo User",
+    "region": "Unknown",
+    "session_count": 0,
+    "type": "Unknown"
   }
 ]
