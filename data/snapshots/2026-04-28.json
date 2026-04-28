@@ -1,0 +1,222 @@
+[
+  {
+    "company_id": null,
+    "company_name": "No company",
+    "created_at": 1730811030,
+    "email": "avidpubsuite@gmail.com",
+    "last_seen_at": 1777354214,
+    "name": "Test Admin",
+    "region": "Unknown",
+    "session_count": 0,
+    "type": "Unknown"
+  },
+  {
+    "company_id": null,
+    "company_name": "No company",
+    "created_at": 1776160343,
+    "email": "leahstalks@gmail.com",
+    "last_seen_at": 1777353603,
+    "name": "Leah Test Stalker",
+    "region": "AU",
+    "session_count": 0,
+    "type": "Unknown"
+  },
+  {
+    "company_id": "261746099642",
+    "company_name": "No company",
+    "created_at": 1776236300,
+    "email": "sebastian@nuclearmedia.com.au",
+    "last_seen_at": 1777353324,
+    "name": "Sebastian Hugo",
+    "region": "AU",
+    "session_count": 0,
+    "type": "Publisher"
+  },
+  {
+    "company_id": "61831098865",
+    "company_name": "Subaru (Aust) Pty Ltd @ Starcom",
+    "created_at": 1777009880,
+    "email": "harrison.hart@starcomww.com",
+    "last_seen_at": 1777352525,
+    "name": "Harrison Hart",
+    "region": "AU",
+    "session_count": 0,
+    "type": "Advertiser"
+  },
+  {
+    "company_id": "165334180282",
+    "company_name": "News Pty Limited-AU",
+    "created_at": 1775017325,
+    "email": "ryan.hedditch@news.com.au",
+    "last_seen_at": 1777351220,
+    "name": "Ryan Hedditch",
+    "region": "AU",
+    "session_count": 0,
+    "type": "Publisher"
+  },
+  {
+    "company_id": "164552910314",
+    "company_name": "Australian Community Media (ACM)-AU",
+    "created_at": 1772685621,
+    "email": "samantha.pyne@austcommunitymedia.com.au",
+    "last_seen_at": 1777350152,
+    "name": "Samantha Pyne",
+    "region": "AU",
+    "session_count": 0,
+    "type": "Publisher"
+  },
+  {
+    "company_id": "61560879553",
+    "company_name": "HCF @ Spark Foundry",
+    "created_at": 1777349206,
+    "email": "amy.mackinnon@sparkfoundryww.com",
+    "last_seen_at": 1777349205,
+    "name": "Amy Mackinnon",
+    "region": "AU",
+    "session_count": 0,
+    "type": "Advertiser"
+  },
+  {
+    "company_id": "165334180282",
+    "company_name": "News Pty Limited-AU",
+    "created_at": 1775019117,
+    "email": "ashley.scobie@news.com.au",
+    "last_seen_at": 1777348480,
+    "name": "Ashley Scobie",
+    "region": "AU",
+    "session_count": 0,
+    "type": "Publisher"
+  },
+  {
+    "company_id": "246938201582",
+    "company_name": "Audacia Audio",
+    "created_at": 1777346786,
+    "email": "kym@audaciaaudio.com",
+    "last_seen_at": 1777347859,
+    "name": "Kym Treasure",
+    "region": "AU",
+    "session_count": 0,
+    "type": "Publisher"
+  },
+  {
+    "company_id": "188213489136",
+    "company_name": "Ellaslist-AU",
+    "created_at": 1773611668,
+    "email": "yvette@ellaslist.com.au",
+    "last_seen_at": 1777344812,
+    "name": "Yvette DuBourdieu",
+    "region": "AU",
+    "session_count": 0,
+    "type": "Publisher"
+  },
+  {
+    "company_id": "164552910314",
+    "company_name": "Australian Community Media (ACM)-AU",
+    "created_at": 1739925126,
+    "email": "lachie.dunn@austcommunitymedia.com.au",
+    "last_seen_at": 1777344030,
+    "name": "Lachie Dunn",
+    "region": "AU",
+    "session_count": 0,
+    "type": "Publisher"
+  },
+  {
+    "company_id": "164552910314",
+    "company_name": "Australian Community Media (ACM)-AU",
+    "created_at": 1740008485,
+    "email": "caroline.jansen@austcommunitymedia.com.au",
+    "last_seen_at": 1777340594,
+    "name": "Caroline Jansen",
+    "region": "AU",
+    "session_count": 0,
+    "type": "Publisher"
+  },
+  {
+    "company_id": "165334180282",
+    "company_name": "News Pty Limited-AU",
+    "created_at": 1777340527,
+    "email": "dominique.mcdermott@news.com.au",
+    "last_seen_at": 1777340531,
+    "name": "Dominique Mcdermott",
+    "region": "AU",
+    "session_count": 0,
+    "type": "Publisher"
+  },
+  {
+    "company_id": "214264270278",
+    "company_name": "Spark Foundry-AU",
+    "created_at": 1777338880,
+    "email": "marshall.raven@sparkfoundryww.com",
+    "last_seen_at": 1777338880,
+    "name": "Marshall Raven",
+    "region": "AU",
+    "session_count": 0,
+    "type": "Advertiser"
+  },
+  {
+    "company_id": "71109116349",
+    "company_name": "SGC Media",
+    "created_at": 1749019699,
+    "email": "nick@sgcmedia.com",
+    "last_seen_at": 1777337864,
+    "name": "Nick McDonald",
+    "region": "AU",
+    "session_count": 0,
+    "type": "Publisher"
+  },
+  {
+    "company_id": "143360144881",
+    "company_name": "Common-AU",
+    "created_at": 1759364040,
+    "email": "mark@commonentertainment.com",
+    "last_seen_at": 1777334966,
+    "name": "Mark Smith",
+    "region": "AU",
+    "session_count": 0,
+    "type": "Publisher"
+  },
+  {
+    "company_id": "215925682652",
+    "company_name": "Ziff Davis-AU",
+    "created_at": 1776919231,
+    "email": "rebecca_le@ziffdavis.com",
+    "last_seen_at": 1777332332,
+    "name": "Rebecca Le",
+    "region": "AU",
+    "session_count": 0,
+    "type": "Publisher"
+  },
+  {
+    "company_id": "243382502889",
+    "company_name": "Adventure.com-AU",
+    "created_at": 1773679788,
+    "email": "emily@adventure.com",
+    "last_seen_at": 1777331765,
+    "name": "Emily Barlow",
+    "region": "AU",
+    "session_count": 0,
+    "type": "Publisher"
+  },
+  {
+    "company_id": "215925682652",
+    "company_name": "Ziff Davis-AU",
+    "created_at": 1758532994,
+    "email": "benjamin_hutton@ziffdavis.com",
+    "last_seen_at": 1777331498,
+    "name": "Ben Hutton",
+    "region": "AU",
+    "session_count": 0,
+    "type": "Publisher"
+  },
+  {
+    "company_id": "61670025675",
+    "company_name": "Finder-UK",
+    "created_at": 1777020736,
+    "email": "nadja.forrest@finder.com",
+    "last_seen_at": 1777305940,
+    "name": "Nadja Forrest",
+    "region": "UK",
+    "session_count": 0,
+    "type": "Publisher"
+  }
+]
