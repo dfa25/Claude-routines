@@ -1,0 +1,32 @@
+name: Debug — Intercom contact lookup
+
+on:
+  workflow_dispatch:
+    inputs:
+      email:
+        description: 'Email to look up in Intercom'
+        required: true
+        default: 'lachie.dunn@austcommunitymedia.com.au'
+      expected_session_count:
+        description: 'Session count to hunt for in the JSON response (from the Intercom UI)'
+        required: false
+        default: '48'
+
+permissions:
+  contents: read
+
+jobs:
+  debug:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -r requirements.txt
+      - name: Inspect Intercom contact
+        env:
+          INTERCOM_ACCESS_TOKEN: ${{ secrets.INTERCOM_ACCESS_TOKEN }}
+          DEBUG_EMAIL: ${{ github.event.inputs.email }}
+          EXPECTED_SESSION_COUNT: ${{ github.event.inputs.expected_session_count }}
+        run: python scripts/debug_intercom_contact.py
