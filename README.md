@@ -102,13 +102,13 @@ Crons are UTC, so local time drifts ±1h with daylight saving — tolerated.
    further for the baseline `session_count` per user.
 3. **Per-user metrics** for each (region × type) bucket:
    - `Last login` = max `last_seen_at` in window
-   - `Days active (7d)` = distinct snapshot dates user appears in
-   - `Logins (7d)` = latest `session_count` − baseline `session_count`
-     (flagged "estimated" if baseline missing)
+   - `Logins (7d)` = count of distinct days user appeared in a daily snapshot
+     (Intercom's `session_count` isn't populated reliably, so we signal on
+     `last_seen_at` appearing in a given day's snapshot instead)
    - `User type` = `New` if `created_at` inside the window, else `Returning`
 4. **Per-org rollup** grouped by `company_name`:
    - Active users, new users, returning users
-   - Total sessions split new vs returning
+   - Total logins split new vs returning
    - Total users at org via HubSpot associated-contacts count
    - `Org penetration %` = active / total
 5. **Upsert Notion** — two databases in the "user data" workspace:
