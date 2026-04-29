@@ -26,15 +26,22 @@ if not EMAIL:
     sys.exit(1)
 
 
-HEADERS = {
+HEADERS_BASE = {
     'Authorization': f'Bearer {INTERCOM_TOKEN}',
     'Content-Type': 'application/json',
     'Accept': 'application/json',
-    'Intercom-Version': '2.10',
 }
 
+VERSIONS_TO_TRY = ['2.10', '2.11', '2.12', '2.13', 'Unstable']
 
-def search_by_email(email):
+
+def headers_for(version):
+    h = dict(HEADERS_BASE)
+    h['Intercom-Version'] = version
+    return h
+
+
+def search_by_email(email, version):
     body = {
         'query': {
             'operator': 'AND',
@@ -42,15 +49,13 @@ def search_by_email(email):
         },
         'pagination': {'per_page': 5},
     }
-    r = requests.post('https://api.intercom.io/contacts/search', headers=HEADERS, json=body)
-    r.raise_for_status()
-    return r.json().get('data', [])
+    r = requests.post('https://api.intercom.io/contacts/search', headers=headers_for(version), json=body)
+    return r
 
 
-def get_by_id(contact_id):
-    r = requests.get(f'https://api.intercom.io/contacts/{contact_id}', headers=HEADERS)
-    r.raise_for_status()
-    return r.json()
+def get_by_id(contact_id, version):
+    r = requests.get(f'https://api.intercom.io/contacts/{contact_id}', headers=headers_for(version))
+    return r
 
 
 def find_paths(obj, target, path='$'):
@@ -81,42 +86,67 @@ def find_keys_matching(obj, needle, path='$'):
 def main():
     print(f'Looking up: {EMAIL}\n')
 
-    print('== /contacts/search response ==')
-    matches = search_by_email(EMAIL)
+    # Use v2.10 to find the contact ID first.
+    print('== Resolving contact ID via v2.10 search ==')
+    r = search_by_email(EMAIL, '2.10')
+    if r.status_code >= 300:
+        print(f'  search failed: {r.status_code} {r.text[:300]}')
+        return
+    matches = r.json().get('data', [])
     if not matches:
         print('  No contact found.')
         return
-    contact = matches[0]
-    print(json.dumps(contact, indent=2, sort_keys=True))
+    contact_id = matches[0]['id']
+    print(f'  Contact id: {contact_id}\n')
 
-    contact_id = contact.get('id')
-    if contact_id:
-        print(f'\n== /contacts/{contact_id} (GET) response ==')
-        full = get_by_id(contact_id)
-        print(json.dumps(full, indent=2, sort_keys=True))
-    else:
-        full = contact
+    per_version = {}
+    for version in VERSIONS_TO_TRY:
+        print(f'== Trying Intercom-Version {version} ==')
+        r = get_by_id(contact_id, version)
+        if r.status_code >= 300:
+            print(f'  GET failed: {r.status_code} {r.text[:200]}\n')
+            continue
+        data = r.json()
+        per_version[version] = data
+        print(f'  {len(data)} top-level fields')
+        # Spot-check obvious session-related keys at top level
+        for k in ('session_count', 'web_session_count', 'sessions', 'statistics', 'web_sessions'):
+            if k in data:
+                print(f'  {k} = {json.dumps(data[k])}')
+        print()
 
-    print('\n== Field hunt ==')
+    print('== Field hunt across all versions ==')
     print(f'Searching all paths whose value == "{EXPECTED}":')
     found = False
-    for src_label, src in (('search', contact), ('GET', full)):
-        for p in find_paths(src, EXPECTED):
-            print(f'  [{src_label}] {p} = {EXPECTED}')
+    for version, data in per_version.items():
+        for p in find_paths(data, EXPECTED):
+            print(f'  [v{version}] {p} = {EXPECTED}')
             found = True
     if not found:
-        print(f'  (no field with value {EXPECTED!r} in either response)')
+        print(f'  (no field with value {EXPECTED!r} in any version response)')
 
     print('\nKeys whose name contains "session":')
-    for src_label, src in (('search', contact), ('GET', full)):
-        for path, val in find_keys_matching(src, 'session'):
-            print(f'  [{src_label}] {path} = {json.dumps(val)}')
+    for version, data in per_version.items():
+        for path, val in find_keys_matching(data, 'session'):
+            print(f'  [v{version}] {path} = {json.dumps(val)}')
 
     print('\nKeys whose name contains "stat" or "metric":')
-    for src_label, src in (('search', contact), ('GET', full)):
+    for version, data in per_version.items():
         for needle in ('stat', 'metric'):
-            for path, val in find_keys_matching(src, needle):
-                print(f'  [{src_label}] {path} = {json.dumps(val)}')
+            for path, val in find_keys_matching(data, needle):
+                print(f'  [v{version}] {path} = {json.dumps(val)}')
+
+    # Diff field names between versions to see if anything new appears.
+    print('\n== Top-level fields per version ==')
+    keys_by_version = {v: set(d.keys()) for v, d in per_version.items()}
+    all_keys = set().union(*keys_by_version.values()) if keys_by_version else set()
+    for v in VERSIONS_TO_TRY:
+        if v not in keys_by_version:
+            continue
+        extras = keys_by_version[v] - keys_by_version.get('2.10', set())
+        if extras:
+            print(f'  v{v} adds: {sorted(extras)}')
+    print()
 
 
 if __name__ == '__main__':
