@@ -327,23 +327,16 @@ def classify_type(company):
 # Slack
 # ─────────────────────────────────────────────────────────────────────────────
 
-def format_message(contacts, region_label, type_label, flag, total_logins):
+def format_message(contacts, region_label, type_label, flag):
     today = datetime.now(timezone.utc).strftime('%d %b %Y')
     lines = [
         f"{flag} *{type_label} Logins \u2013 Last 24 Hours ({region_label})* \u2502 {today}",
         '\u2500' * 44,
     ]
     for c in contacts:
-        lt = c.get('logins_today')
-        suffix = f" \u2502 {lt} login{'s' if lt != 1 else ''} today" if lt else ''
         lines.append(f"\u2022 *{c['name']}* \u2502 {c['email']}")
-        lines.append(f"  Company: {c['company_name']} \u2502 Last seen: {c['last_seen_str']}{suffix}")
-    unique = len(contacts)
-    lines += [
-        '',
-        f"Unique users: {unique}",
-        f"Total logins: {total_logins}",
-    ]
+        lines.append(f"  Company: {c['company_name']} \u2502 Last seen: {c['last_seen_str']}")
+    lines += ['', f"Active today: {len(contacts)}"]
     return '\n'.join(lines)
 
 
@@ -502,10 +495,9 @@ def main():
             print(f'Skipping {type_label} {region_label} (region filter = {TARGET_REGION})')
             continue
         if bucket:
-            total_logins = sum(c.get('logins_today') or 0 for c in bucket)
             if LOOKBACK_HOURS == 24:
-                post_to_slack(channel, format_message(bucket, region_label, type_label, flag, total_logins))
-                print(f'Posted {len(bucket)} {type_label} {region_label} contact(s) to Slack (total logins: {total_logins})')
+                post_to_slack(channel, format_message(bucket, region_label, type_label, flag))
+                print(f'Posted {len(bucket)} {type_label} {region_label} contact(s) to Slack')
             else:
                 print(f'Backfill mode ({LOOKBACK_HOURS}h): captured {len(bucket)} {type_label} {region_label} contact(s) to snapshot, skipping Slack post.')
         else:
