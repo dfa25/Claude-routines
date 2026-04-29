@@ -83,21 +83,10 @@ def aggregate_users(snapshots, window, team, region):
     - team:      'Publisher' or 'Advertiser'
     - region:    'AU' or 'UK'
     """
-    window_set = set(window)
     window_start = window[0]
-    window_end_dt = datetime.strptime(window[-1], '%Y-%m-%d').replace(tzinfo=timezone.utc) + timedelta(days=1)
     window_start_ts = datetime.strptime(window_start, '%Y-%m-%d').replace(tzinfo=timezone.utc).timestamp()
 
     per_user = {}  # email -> aggregated dict
-
-    # Baseline session counts: most recent snapshot BEFORE the window.
-    baseline_sessions = {}
-    for date_str in sorted(snapshots.keys()):
-        if date_str >= window_start:
-            break
-        for row in snapshots[date_str]:
-            if row.get('region') == region and row.get('type') == team and row.get('email'):
-                baseline_sessions[row['email']] = row.get('session_count') or 0
 
     # Walk window snapshots.
     for date_str in window:
@@ -117,8 +106,6 @@ def aggregate_users(snapshots, window, team, region):
                 'team':            team,
                 'created_at':      row.get('created_at'),
                 'active_dates':    set(),
-                'latest_session':  0,
-                'earliest_session_in_window': None,
                 'last_seen_at':    0,
             })
             # Most recent row wins for descriptive fields.
@@ -128,28 +115,14 @@ def aggregate_users(snapshots, window, team, region):
             u['created_at'] = row.get('created_at') or u['created_at']
 
             u['active_dates'].add(date_str)
-            sc = row.get('session_count') or 0
-            u['latest_session'] = max(u['latest_session'], sc)
-            if u['earliest_session_in_window'] is None or sc < u['earliest_session_in_window']:
-                u['earliest_session_in_window'] = sc
             last_seen = row.get('last_seen_at') or 0
             if last_seen > u['last_seen_at']:
                 u['last_seen_at'] = last_seen
 
-    # Finalise: compute logins_7d and user type.
+    # Finalise: Logins (7d) = count of distinct days user appeared in snapshots
+    # (last_seen_at-based signal, since Intercom's session_count isn't populated).
     for email, u in per_user.items():
-        baseline = baseline_sessions.get(email)
-        if baseline is not None:
-            u['logins_7d'] = max(u['latest_session'] - baseline, 0)
-            u['logins_estimated'] = False
-        else:
-            # No baseline — best we can do is latest - earliest-in-window, plus 1 for the first
-            # appearance in the window. Flag as estimated.
-            diff = max(u['latest_session'] - (u['earliest_session_in_window'] or 0), 0)
-            u['logins_7d'] = diff + 1
-            u['logins_estimated'] = True
-
-        u['days_active_7d'] = len(u['active_dates'])
+        u['logins_7d'] = len(u['active_dates'])
 
         created_at = u.get('created_at') or 0
         u['user_type'] = 'New' if created_at and created_at >= window_start_ts else 'Returning'
@@ -203,7 +176,7 @@ def rollup_by_org(users):
     orgs = defaultdict(lambda: {
         'name': None, 'company_id': None, 'users': [],
         'active_users': 0, 'new_users': 0, 'returning_users': 0,
-        'logins_7d': 0, 'new_sessions_7d': 0, 'returning_sessions_7d': 0,
+        'logins_7d': 0, 'new_user_logins_7d': 0, 'returning_user_logins_7d': 0,
         'total_users_hubspot': None,
     })
     for u in users:
@@ -217,10 +190,10 @@ def rollup_by_org(users):
         o['logins_7d'] += u['logins_7d']
         if u['user_type'] == 'New':
             o['new_users'] += 1
-            o['new_sessions_7d'] += u['logins_7d']
+            o['new_user_logins_7d'] += u['logins_7d']
         else:
             o['returning_users'] += 1
-            o['returning_sessions_7d'] += u['logins_7d']
+            o['returning_user_logins_7d'] += u['logins_7d']
 
     for o in orgs.values():
         o['total_users_hubspot'] = hubspot_contact_count(o['company_id'])
@@ -244,28 +217,25 @@ def _notion_headers():
 
 DESIRED_SCHEMA = {
     # Notion DBs always auto-create a Title column; we name it "User" via update.
-    'Email':                   {'email': {}},
-    'Organisation':            {'rich_text': {}},
-    'Region':                  {'select': {'options': [
+    'Email':                       {'email': {}},
+    'Organisation':                {'rich_text': {}},
+    'Region':                      {'select': {'options': [
         {'name': 'ANZ', 'color': 'blue'},
         {'name': 'UK',  'color': 'purple'},
     ]}},
-    'Week of':                 {'date': {}},
-    'Last login':              {'date': {}},
-    'Logins (7d)':             {'number': {'format': 'number'}},
-    'Days active (7d)':        {'number': {'format': 'number'}},
-    'User type':               {'select': {'options': [
+    'Week of':                     {'date': {}},
+    'Last login':                  {'date': {}},
+    'Logins (7d)':                 {'number': {'format': 'number'}},
+    'User type':                   {'select': {'options': [
         {'name': 'New',       'color': 'green'},
         {'name': 'Returning', 'color': 'gray'},
     ]}},
-    'Session count (lifetime)': {'number': {'format': 'number'}},
-    'Active users at org':     {'number': {'format': 'number'}},
-    'Total users at org':      {'number': {'format': 'number'}},
-    'Org penetration %':       {'number': {'format': 'percent'}},
-    'Org logins (7d)':         {'number': {'format': 'number'}},
-    'Org new sessions (7d)':   {'number': {'format': 'number'}},
-    'Org returning sessions (7d)': {'number': {'format': 'number'}},
-    'Notes':                   {'rich_text': {}},
+    'Active users at org':         {'number': {'format': 'number'}},
+    'Total users at org':          {'number': {'format': 'number'}},
+    'Org penetration %':           {'number': {'format': 'percent'}},
+    'Org logins (7d)':             {'number': {'format': 'number'}},
+    'New user logins (7d)':        {'number': {'format': 'number'}},
+    'Returning user logins (7d)':  {'number': {'format': 'number'}},
 }
 
 
@@ -332,24 +302,18 @@ def _notion_properties(user, org, week_of, region_label):
         except (ValueError, TypeError):
             pass
 
-    notes = []
-    if user.get('logins_estimated'):
-        notes.append('Logins (7d) estimated — no snapshot prior to window.')
-
     props = {
-        'User':              {'title':     [{'text': {'content': user['name'] or user['email']}}]},
-        'Email':             {'email':     user['email']},
-        'Organisation':      {'rich_text': [{'text': {'content': user['company_name'] or 'No company'}}]},
-        'Region':            {'select':    {'name': region_label}},
-        'Week of':           {'date':      {'start': week_of}},
-        'Logins (7d)':       {'number':    user['logins_7d']},
-        'Days active (7d)':  {'number':    user['days_active_7d']},
-        'User type':         {'select':    {'name': user['user_type']}},
-        'Session count (lifetime)':    {'number': user['latest_session']},
-        'Active users at org':         {'number': org['active_users']},
-        'Org logins (7d)':             {'number': org['logins_7d']},
-        'Org new sessions (7d)':       {'number': org['new_sessions_7d']},
-        'Org returning sessions (7d)': {'number': org['returning_sessions_7d']},
+        'User':                        {'title':     [{'text': {'content': user['name'] or user['email']}}]},
+        'Email':                       {'email':     user['email']},
+        'Organisation':                {'rich_text': [{'text': {'content': user['company_name'] or 'No company'}}]},
+        'Region':                      {'select':    {'name': region_label}},
+        'Week of':                     {'date':      {'start': week_of}},
+        'Logins (7d)':                 {'number':    user['logins_7d']},
+        'User type':                   {'select':    {'name': user['user_type']}},
+        'Active users at org':         {'number':    org['active_users']},
+        'Org logins (7d)':             {'number':    org['logins_7d']},
+        'New user logins (7d)':        {'number':    org['new_user_logins_7d']},
+        'Returning user logins (7d)':  {'number':    org['returning_user_logins_7d']},
     }
     if last_login_iso:
         props['Last login'] = {'date': {'start': last_login_iso}}
@@ -357,8 +321,6 @@ def _notion_properties(user, org, week_of, region_label):
         props['Total users at org'] = {'number': org['total_users_hubspot']}
     if org.get('penetration_pct') is not None:
         props['Org penetration %'] = {'number': org['penetration_pct']}
-    if notes:
-        props['Notes'] = {'rich_text': [{'text': {'content': ' '.join(notes)}}]}
     return props
 
 
@@ -398,7 +360,7 @@ def post_to_slack(channel_id, text):
         raise RuntimeError(f'Slack post failed: {data.get("error")}')
 
 
-def format_slack_summary(team_label, region_label, flag, window, users, orgs, notion_db_id, estimated):
+def format_slack_summary(team_label, region_label, flag, window, users, orgs, notion_db_id):
     start = datetime.strptime(window[0], '%Y-%m-%d').strftime('%a %d %b')
     end   = datetime.strptime(window[-1], '%Y-%m-%d').strftime('%a %d %b')
 
@@ -406,21 +368,19 @@ def format_slack_summary(team_label, region_label, flag, window, users, orgs, no
     new_users = sum(1 for u in users if u['user_type'] == 'New')
     ret_users = total_unique - new_users
     total_logins = sum(u['logins_7d'] for u in users)
-    new_sessions = sum(u['logins_7d'] for u in users if u['user_type'] == 'New')
-    ret_sessions = total_logins - new_sessions
+    new_logins = sum(u['logins_7d'] for u in users if u['user_type'] == 'New')
+    ret_logins = total_logins - new_logins
     active_orgs = len(orgs)
 
-    total_orgs_known = [o for o in orgs.values() if o.get('total_users_hubspot')]
     lines = [
         f"{flag} *Weekly Login Recap — {team_label} {region_label}* │ {start} → {end}",
         '─' * 52,
         f"Unique users: *{total_unique}*  ({ret_users} returning · {new_users} new)",
-        f"Total logins: *{total_logins}*  ({ret_sessions} returning · {new_sessions} new)",
+        f"Total logins: *{total_logins}*  ({ret_logins} returning · {new_logins} new)",
         f"Active orgs: *{active_orgs}*",
+        '_Logins = distinct days each user was active in the 7-day window._',
+        '',
     ]
-    if estimated:
-        lines.append("_⚠️ Logins (7d) partly estimated — first week of snapshots._")
-    lines.append('')
 
     for org in sorted(orgs.values(), key=lambda o: (-o['logins_7d'], o['name'] or '')):
         tu = org.get('total_users_hubspot')
@@ -429,7 +389,7 @@ def format_slack_summary(team_label, region_label, flag, window, users, orgs, no
         ratio_str = f"{org['active_users']}/{tu}" if tu else f"{org['active_users']}"
         lines.append(
             f"• *{org['name']}* — {ratio_str} users{pen_str}, {org['logins_7d']} logins "
-            f"({org['new_sessions_7d']} new · {org['returning_sessions_7d']} returning)"
+            f"({org['new_user_logins_7d']} new · {org['returning_user_logins_7d']} returning)"
         )
         for u in sorted(org['users'], key=lambda x: -x['logins_7d']):
             last_login_str = ''
@@ -441,8 +401,7 @@ def format_slack_summary(team_label, region_label, flag, window, users, orgs, no
             tag = '🆕' if u['user_type'] == 'New' else '↩️'
             lines.append(
                 f"   {tag} {u['email']} · last {last_login_str} · "
-                f"{u['logins_7d']} login{'s' if u['logins_7d'] != 1 else ''} "
-                f"over {u['days_active_7d']} day{'s' if u['days_active_7d'] != 1 else ''}"
+                f"{u['logins_7d']} login{'s' if u['logins_7d'] != 1 else ''}"
             )
         lines.append('')
 
@@ -495,8 +454,7 @@ def main():
             schemas_ensured.add(db_id)
 
         upsert_user_rows(db_id, users, orgs, week_of, region_label)
-        estimated = any(u.get('logins_estimated') for u in users)
-        msg = format_slack_summary(team, region_label, flag, window, users, orgs, db_id, estimated)
+        msg = format_slack_summary(team, region_label, flag, window, users, orgs, db_id)
         post_to_slack(channel, msg)
         print(f'  Posted weekly summary: {len(users)} users across {len(orgs)} orgs')
 
