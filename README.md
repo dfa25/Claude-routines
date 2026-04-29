@@ -10,7 +10,7 @@ by schedule or events.
 | Asana Review | Mon–Fri 16:00 AEST + ✏️ in #df | #df | Surface overdue tasks, bulk-execute via reactions |
 | Email Triage | Mon–Fri 09:00 AEST + ✏️ in #df | #df | Scan Gmail, draft replies, action via reactions |
 | Daily Intercom Report | Daily 12:00 AEST / 12:00 BST | 4 activity channels | Post last-24h logins (unique users + total logins) per region/team; persist daily snapshot |
-| Weekly Login Report | Fri 09:00 AEST (AU) · Thu 09:00 BST (UK) | 4 activity channels + 2 Notion DBs | Weekly rollup: users, sessions, new vs returning, org penetration |
+| Weekly Login Report | Mon 09:00 AEST (AU, recap Mon–Sun) · Thu 09:00 BST (UK, recap Fri–Thu) | 4 activity channels + 2 Notion DBs | Weekly rollup: users, sessions, new vs returning, org penetration |
 
 ## Two-phase pattern
 
@@ -66,8 +66,8 @@ Two workflows, one shared snapshot store, two destinations.
 |---|---|---|---|
 | `daily-intercom-report-au.yml` | `0 2 * * *` daily | 12pm Sydney (1pm AEDT) | `REGION=AU` |
 | `daily-intercom-report-uk.yml` | `0 11 * * *` daily | 12pm London (1pm GMT) | `REGION=UK` |
-| `weekly-login-report-au.yml` | `0 23 * * 4` | Fri 9am Sydney (10am AEDT) | `REGION=AU` |
-| `weekly-login-report-uk.yml` | `0 8 * * 4` | Thu 9am London (8am GMT) | `REGION=UK` |
+| `weekly-login-report-au.yml` | `0 23 * * 0` | Mon 9am Sydney (10am AEDT) — recap previous Mon–Sun | `REGION=AU` |
+| `weekly-login-report-uk.yml` | `0 8 * * 4` | Thu 9am London (8am GMT) — recap Fri–Thu | `REGION=UK` |
 
 Crons are UTC, so local time drifts ±1h with daylight saving — tolerated.
 
@@ -98,8 +98,10 @@ Crons are UTC, so local time drifts ±1h with daylight saving — tolerated.
 ### Weekly flow (runs once per region, Thu UK / Fri AU)
 
 1. **Load** every snapshot in `data/snapshots/`.
-2. **Build window** = the 7 UTC days ending yesterday. Look back one day
-   further for the baseline `session_count` per user.
+2. **Build window** — region-specific:
+   - **AU** (run Mon 9am AEST): the previous Mon–Sun (7 UTC days ending yesterday)
+   - **UK** (run Thu 9am BST): rolling Fri–Thu (7 UTC days ending today; today's
+     daily snapshot may not have run yet, so the Thursday end-day can be partial)
 3. **Per-user metrics** for each (region × type) bucket:
    - `Last login` = max `last_seen_at` in window
    - `Logins (7d)` = count of distinct days user appeared in a daily snapshot
