@@ -1,0 +1,24 @@
+[
+  {
+    "company_id": null,
+    "company_name": "No company",
+    "created_at": 1730811030,
+    "email": "avidpubsuite@gmail.com",
+    "last_seen_at": 1777697591,
+    "name": "Test Admin",
+    "region": "Unknown",
+    "session_count": 0,
+    "type": "Unknown"
+  },
+  {
+    "company_id": "140715962811",
+    "company_name": "Kelsey Media-UK",
+    "created_at": 1777644232,
+    "email": "stephen.jones@kelsey.co.uk",
+    "last_seen_at": 1777649415,
+    "name": "Stephen Jones",
+    "region": "UK",
+    "session_count": 0,
+    "type": "Publisher"
+  }
+]
