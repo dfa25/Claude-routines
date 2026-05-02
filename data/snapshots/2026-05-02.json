@@ -4,7 +4,7 @@
     "company_name": "No company",
     "created_at": 1730811030,
     "email": "avidpubsuite@gmail.com",
-    "last_seen_at": 1777697591,
+    "last_seen_at": 1777718532,
     "name": "Test Admin",
     "region": "Unknown",
     "session_count": 0,
@@ -20,5 +20,27 @@
     "region": "UK",
     "session_count": 0,
     "type": "Publisher"
+  },
+  {
+    "company_id": null,
+    "company_name": "No company",
+    "created_at": 1730094734,
+    "email": "admin@gmail.com",
+    "last_seen_at": 1777715897,
+    "name": "Avid Admin",
+    "region": "Unknown",
+    "session_count": 0,
+    "type": "Unknown"
+  },
+  {
+    "company_id": null,
+    "company_name": "No company",
+    "created_at": 1777699946,
+    "email": "cvbphl0@gmail.com",
+    "last_seen_at": 1777701388,
+    "name": "Marketplace - Brief04",
+    "region": "Unknown",
+    "session_count": 0,
+    "type": "Unknown"
   }
 ]
