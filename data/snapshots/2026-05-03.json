@@ -1,0 +1,24 @@
+[
+  {
+    "company_id": "215925682652",
+    "company_name": "Ziff Davis-AU",
+    "created_at": 1758532994,
+    "email": "benjamin_hutton@ziffdavis.com",
+    "last_seen_at": 1777778275,
+    "name": "Ben Hutton",
+    "region": "AU",
+    "session_count": 0,
+    "type": "Publisher"
+  },
+  {
+    "company_id": null,
+    "company_name": "No company",
+    "created_at": 1730811030,
+    "email": "avidpubsuite@gmail.com",
+    "last_seen_at": 1777753373,
+    "name": "Test Admin",
+    "region": "Unknown",
+    "session_count": 0,
+    "type": "Unknown"
+  }
+]
