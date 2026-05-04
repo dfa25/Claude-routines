@@ -424,15 +424,10 @@ def main():
         print('No snapshots found. Nothing to report.')
         return
 
-    # Window cadence:
-    #   AU runs Mon 9am AEST → recap previous Mon-Sun (reference = yesterday)
-    #   UK runs Thu 9am BST  → recap rolling Fri-Thu  (reference = today)
+    # Window cadence: both regions run Mon 9am Sydney (Sun 23:00 UTC).
+    # Window = the Mon → Sun that just ended (7 days ending on the run day in UTC).
     today = datetime.now(timezone.utc).date()
-    if TARGET_REGION == 'UK':
-        reference = today
-    else:
-        reference = today - timedelta(days=1)
-    window = window_dates(reference, days=7)
+    window = window_dates(today, days=7)
     week_of = window[0]  # date representing the start of the window
     print(f'Window: {window[0]} → {window[-1]} (week_of={week_of})')
 
