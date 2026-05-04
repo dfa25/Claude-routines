@@ -2,8 +2,8 @@ name: Weekly Login Report — UK
 
 on:
   schedule:
-    # Thu 9am BST = Thu 08:00 UTC. Drifts to Thu 9am during GMT (Oct–Mar, one hour earlier locally only during overlap).
-    - cron: '0 8 * * 4'
+    # Mon 9am AEST = Sun 23:00 UTC. Drifts to Mon 10am during AEDT (Oct–Apr).
+    - cron: '0 23 * * 0'
   workflow_dispatch:
 
 permissions:
