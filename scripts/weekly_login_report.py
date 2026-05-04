@@ -424,10 +424,14 @@ def main():
         print('No snapshots found. Nothing to report.')
         return
 
-    # Window cadence: both regions run Mon 9am Sydney (Sun 23:00 UTC).
-    # Window = the Mon → Sun that just ended (7 days ending on the run day in UTC).
+    # Window cadence: Mon 9am Sydney (Sun 23:00 UTC) for both regions.
+    # Always recap the most recent COMPLETED Mon-Sun week, regardless of
+    # when the workflow is manually triggered (today's UTC weekday could
+    # be Sun on the cron tick, or Mon if a human clicks Run later in the day).
     today = datetime.now(timezone.utc).date()
-    window = window_dates(today, days=7)
+    days_since_sunday = (today.weekday() + 1) % 7  # Mon=0..Sun=6 → 1..0
+    last_sunday = today - timedelta(days=days_since_sunday)
+    window = window_dates(last_sunday, days=7)
     week_of = window[0]  # date representing the start of the window
     print(f'Window: {window[0]} → {window[-1]} (week_of={week_of})')
 
