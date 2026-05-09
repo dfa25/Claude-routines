@@ -1,0 +1,46 @@
+[
+  {
+    "company_id": null,
+    "company_name": "No company",
+    "created_at": 1730811030,
+    "email": "avidpubsuite@gmail.com",
+    "last_seen_at": 1778303870,
+    "name": "Test Admin",
+    "region": "Unknown",
+    "session_count": 0,
+    "type": "Unknown"
+  },
+  {
+    "company_id": null,
+    "company_name": "No company",
+    "created_at": 1776160343,
+    "email": "leahstalks@gmail.com",
+    "last_seen_at": 1778300059,
+    "name": "Leah Test Stalker",
+    "region": "AU",
+    "session_count": 0,
+    "type": "Unknown"
+  },
+  {
+    "company_id": "164552910314",
+    "company_name": "Australian Community Media (ACM)-AU",
+    "created_at": 1762731389,
+    "email": "molly.jolly@austcommunitymedia.com.au",
+    "last_seen_at": 1778283153,
+    "name": "Molly Jolly",
+    "region": "AU",
+    "session_count": 0,
+    "type": "Publisher"
+  },
+  {
+    "company_id": "162900965853",
+    "company_name": "Performics-AU",
+    "created_at": 1752580302,
+    "email": "ed.fleeman@performics.com",
+    "last_seen_at": 1778249395,
+    "name": "Ed Fleeman",
+    "region": "AU",
+    "session_count": 0,
+    "type": "Advertiser"
+  }
+]
