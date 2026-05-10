@@ -20,5 +20,27 @@
     "region": "AU",
     "session_count": 0,
     "type": "Unknown"
+  },
+  {
+    "company_id": null,
+    "company_name": "No company",
+    "created_at": 1730811030,
+    "email": "avidpubsuite@gmail.com",
+    "last_seen_at": 1778411622,
+    "name": "Test Admin",
+    "region": "Unknown",
+    "session_count": 0,
+    "type": "Unknown"
+  },
+  {
+    "company_id": "164552910314",
+    "company_name": "Australian Community Media (ACM)-AU",
+    "created_at": 1762731389,
+    "email": "molly.jolly@austcommunitymedia.com.au",
+    "last_seen_at": 1778402403,
+    "name": "Molly Jolly",
+    "region": "AU",
+    "session_count": 0,
+    "type": "Publisher"
   }
 ]
