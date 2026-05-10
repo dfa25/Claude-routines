@@ -1,0 +1,24 @@
+[
+  {
+    "company_id": "84958872046",
+    "company_name": "We Are Explorers-AU",
+    "created_at": 1752728333,
+    "email": "ella@weareexplorers.co",
+    "last_seen_at": 1778374469,
+    "name": "Ella Garbett",
+    "region": "AU",
+    "session_count": 0,
+    "type": "Publisher"
+  },
+  {
+    "company_id": "264259221997",
+    "company_name": "Prosperity Media",
+    "created_at": 1764858265,
+    "email": "carl@prosperitymedia.com.au",
+    "last_seen_at": 1778349954,
+    "name": "Carl Borlongan",
+    "region": "AU",
+    "session_count": 0,
+    "type": "Unknown"
+  }
+]
