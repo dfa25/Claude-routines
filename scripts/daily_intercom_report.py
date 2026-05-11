@@ -7,13 +7,13 @@ from datetime import datetime, timezone, timedelta
 
 SNAPSHOT_DIR = Path(__file__).resolve().parent.parent / 'data' / 'snapshots'
 
-# ── Slack channels ────────────────────────────────────────────────────────────
+# ── Slack channels ───────────────────────────────────────────────────────────────────
 PUB_AU_CHANNEL = 'C090Z7R8516'   # #mediaowner-login-activity-anz
 PUB_UK_CHANNEL = 'C09LCBRPJSK'   # #mediaowner-login-activity-uk
 ADV_AU_CHANNEL = 'C0ATC9AHKN0'   # #advertiser-activity-au
 ADV_UK_CHANNEL = 'C0AU2VB9VNU'   # #advertiser-activity-uk
 
-# ── HubSpot owner IDs for the UK team (region fallback) ──────────────────────
+# ── HubSpot owner IDs for the UK team (region fallback) ────────────────────────────
 UK_OWNER_IDS = {
     358889915,  # Ben Micic
     358889914,  # Tom Gunter
@@ -22,7 +22,7 @@ UK_OWNER_IDS = {
     358889938,  # Madeleine Spicer
 }
 
-# ── Owner-based fallback for region (AU-focused owners) ──────────────────────
+# ── Owner-based fallback for region (AU-focused owners) ────────────────────────────
 AU_OWNER_IDS = {
     79378340,    # Jade Scales (AU Advertiser)
     358889920,   # Daniel Walsh (AU Advertiser)
@@ -33,7 +33,7 @@ AU_OWNER_IDS = {
     # Cindy is AU+UK — excluded (region-ambiguous).
 }
 
-# ── Owner-based fallback for type (only used when pipelines are empty) ───────
+# ── Owner-based fallback for type (only used when pipelines are empty) ───────────────
 PUBLISHER_OWNER_IDS = {
     358889918,   # Chloe Patterson (AU Publisher)
     75429652,    # Cindy Alexandra (AU+UK Publisher)
@@ -46,7 +46,7 @@ ADVERTISER_OWNER_IDS = {
     358889939,   # Senna Spear
 }
 
-# ── HubSpot deal pipeline IDs ────────────────────────────────────────────────
+# ── HubSpot deal pipeline IDs ─────────────────────────────────────────────────
 PUBLISHER_PIPELINES = {
     '930919882',   # Pub SaaS
     '930940349',   # AmpPlus
@@ -63,11 +63,11 @@ ADVERTISER_PIPELINES = {
     't_ecaa8c5142c3c35eb072b4cff1cdb2f8',   # AU Collab Platform - Advertiser Pipeline
 }
 
-# ── Country value sets (lowercase) ───────────────────────────────────────────
+# ── Country value sets (lowercase) ───────────────────────────────────────────────
 AU_VALUES = {'australia', 'au', 'anz', 'aus'}
 UK_VALUES = {'united kingdom', 'uk', 'gb', 'great britain', 'england', 'scotland', 'wales'}
 
-# ── Internal domains to exclude (substring match on domain part) ─────────────
+# ── Internal domains to exclude (substring match on domain part) ───────────────────
 INTERNAL_DOMAIN_SUBSTRINGS = {'avid'}
 
 
@@ -78,7 +78,7 @@ def is_internal_email(email):
     return any(sub in domain for sub in INTERNAL_DOMAIN_SUBSTRINGS)
 
 
-# ── API credentials + region filter ──────────────────────────────────────────
+# ── API credentials + region filter ──────────────────────────────────────────────
 INTERCOM_TOKEN = os.environ['INTERCOM_ACCESS_TOKEN']
 HUBSPOT_TOKEN  = os.environ['HUBSPOT_ACCESS_TOKEN']
 SLACK_TOKEN    = os.environ['SLACK_BOT_TOKEN']
@@ -267,9 +267,38 @@ def _email_tld_region(email):
     return None
 
 
-def classify_region(company, intercom_country=None, email=None):
+# Per-domain classification overrides loaded from scripts/classification_overrides.json.
+# Used to fix multi-region agencies that HubSpot models as one record (e.g. dentsu.com
+# users in both AU and UK collapse into a single "Dentsu-UK" record in HubSpot).
+_OVERRIDES_PATH = Path(__file__).resolve().parent / 'classification_overrides.json'
+try:
+    _DOMAIN_OVERRIDES = json.loads(_OVERRIDES_PATH.read_text()).get('domains', {})
+except (OSError, ValueError):
+    _DOMAIN_OVERRIDES = {}
+
+
+def get_domain_override(email):
+    """Return the override dict for an email's domain, or {} if none."""
+    if not email or '@' not in email:
+        return {}
+    domain = email.split('@')[-1].lower()
+    return _DOMAIN_OVERRIDES.get(domain, {})
+
+
+def classify_region(company, intercom_country=None, email=None, override=None):
     """Return 'AU', 'UK', or 'Unknown'."""
-    if company:
+    override = override or {}
+    region_rule = override.get('region')
+
+    # Hard region override (literal 'AU' / 'UK').
+    if region_rule in ('AU', 'UK'):
+        return region_rule
+
+    # 'from_intercom' = global agency with multi-region offices; skip HubSpot's
+    # company-level country and trust per-user signals (email TLD + Intercom).
+    use_hubspot = region_rule != 'from_intercom'
+
+    if use_hubspot and company:
         country = (company.get('country') or '').lower().strip()
         if country in AU_VALUES:
             return 'AU'
@@ -298,7 +327,8 @@ def classify_region(company, intercom_country=None, email=None):
     if tld_region:
         return tld_region
 
-    # Final fallback: Intercom device location (IP-based, less reliable — last resort only)
+    # Intercom device location (IP-based) — last resort for everyone, primary
+    # signal for `from_intercom` overrides.
     if intercom_country:
         c = intercom_country.lower().strip()
         if c in AU_VALUES:
@@ -309,8 +339,15 @@ def classify_region(company, intercom_country=None, email=None):
     return 'Unknown'
 
 
-def classify_type(company):
+def classify_type(company, override=None):
     """Return 'Publisher', 'Advertiser', or 'Unknown'."""
+    override = override or {}
+    type_rule = override.get('type')
+
+    # Hard type override wins over HubSpot signals.
+    if type_rule in ('Publisher', 'Advertiser'):
+        return type_rule
+
     if not company:
         return 'Unknown'
 
@@ -452,8 +489,9 @@ def main():
 
         company = get_hubspot_company_for_email(email)
         intercom_country = (c.get('location') or {}).get('country')
-        region = classify_region(company, intercom_country, email=email)
-        ctype  = classify_type(company)
+        override = get_domain_override(email)
+        region = classify_region(company, intercom_country, email=email, override=override)
+        ctype  = classify_type(company, override=override)
 
         company_id = None
         if company:
@@ -508,6 +546,7 @@ def main():
                 'hs_client_type': (company or {}).get('client_type'),
                 'intercom_country': intercom_country,
                 'email_tld_region': _email_tld_region(email),
+                'domain_override': override,
             }
             unknown.append(diag)
 
@@ -526,6 +565,7 @@ def main():
             print(f'      HubSpot publisher_size: {c["hs_publisher_size"]!r}  client_type: {c["hs_client_type"]!r}')
             print(f'      Intercom country:  {c["intercom_country"]!r}')
             print(f'      Email TLD region:  {c["email_tld_region"]!r}')
+            print(f'      Domain override:   {c["domain_override"]}')
             print(f'      → classified region={c["region"]} type={c["type"]}')
 
     jobs = [
