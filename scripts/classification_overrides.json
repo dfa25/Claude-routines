@@ -1,15 +1,16 @@
 {
-  "_comment": "Per-domain classification overrides. Used by daily_intercom_report.py before falling through to HubSpot signals. Add a domain when HubSpot's single-record-per-company model misclassifies it (multi-region agencies, etc.).",
-  "_region_values": "Either a hard region ('AU' or 'UK'), or 'from_intercom' to skip HubSpot's company-level country and trust the per-user Intercom location instead. Use 'from_intercom' for global agencies with offices in multiple regions.",
+  "_comment": "Per-domain classification overrides. Used by daily_intercom_report.py to force a region or type for specific domains.",
+  "_region_values": "Either 'AU' or 'UK' to hard-force a region. Omit to use the default region chain (Intercom IP -> email TLD -> HubSpot).",
   "_type_values": "Either 'Publisher' or 'Advertiser'. Hard override — wins over HubSpot pipeline/owner/publisher_size signals.",
+  "_note": "Global agencies (Dentsu, WPP etc) now only need a type override — region falls through to Intercom IP which correctly identifies the user's actual office.",
   "domains": {
-    "dentsu.com":         {"type": "Advertiser", "region": "from_intercom"},
-    "performics.com":     {"type": "Advertiser", "region": "from_intercom"},
-    "mindshareworld.com": {"type": "Advertiser", "region": "from_intercom"},
-    "groupm.com":         {"type": "Advertiser", "region": "from_intercom"},
-    "wpp.com":            {"type": "Advertiser", "region": "from_intercom"},
-    "omd.com":            {"type": "Advertiser", "region": "from_intercom"},
-    "publicis.com":       {"type": "Advertiser", "region": "from_intercom"},
-    "omnicom.com":        {"type": "Advertiser", "region": "from_intercom"}
+    "dentsu.com":         {"type": "Advertiser"},
+    "performics.com":     {"type": "Advertiser"},
+    "mindshareworld.com": {"type": "Advertiser"},
+    "groupm.com":         {"type": "Advertiser"},
+    "wpp.com":            {"type": "Advertiser"},
+    "omd.com":            {"type": "Advertiser"},
+    "publicis.com":       {"type": "Advertiser"},
+    "omnicom.com":        {"type": "Advertiser"}
   }
 }
