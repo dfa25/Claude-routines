@@ -249,7 +249,25 @@ def get_hubspot_company_for_email(email):
 # Region + type classification
 # ─────────────────────────────────────────────────────────────────────────────
 
-def classify_region(company, intercom_country=None):
+# Email TLD → region fallback (last-resort signal when HubSpot/Intercom don't classify).
+UK_TLDS = ('.co.uk', '.uk', '.gb')
+AU_TLDS = ('.com.au', '.net.au', '.org.au', '.au')
+
+
+def _email_tld_region(email):
+    if not email:
+        return None
+    domain = email.split('@')[-1].lower()
+    for tld in UK_TLDS:
+        if domain.endswith(tld):
+            return 'UK'
+    for tld in AU_TLDS:
+        if domain.endswith(tld):
+            return 'AU'
+    return None
+
+
+def classify_region(company, intercom_country=None, email=None):
     """Return 'AU', 'UK', or 'Unknown'."""
     if company:
         country = (company.get('country') or '').lower().strip()
@@ -274,6 +292,11 @@ def classify_region(company, intercom_country=None):
                     return 'AU'
             except (ValueError, TypeError):
                 pass
+
+    # Email TLD fallback (e.g. amsgroup.co.uk → UK). Reliable for country-coded TLDs.
+    tld_region = _email_tld_region(email)
+    if tld_region:
+        return tld_region
 
     # Final fallback: Intercom device location (IP-based, less reliable — last resort only)
     if intercom_country:
@@ -330,12 +353,12 @@ def classify_type(company):
 def format_message(contacts, region_label, type_label, flag):
     today = datetime.now(timezone.utc).strftime('%d %b %Y')
     lines = [
-        f"{flag} *{type_label} Logins \u2013 Last 24 Hours ({region_label})* \u2502 {today}",
-        '\u2500' * 44,
+        f"{flag} *{type_label} Logins – Last 24 Hours ({region_label})* │ {today}",
+        '─' * 44,
     ]
     for c in contacts:
-        lines.append(f"\u2022 *{c['name']}* \u2502 {c['email']}")
-        lines.append(f"  Company: {c['company_name']} \u2502 Last seen: {c['last_seen_str']}")
+        lines.append(f"• *{c['name']}* │ {c['email']}")
+        lines.append(f"  Company: {c['company_name']} │ Last seen: {c['last_seen_str']}")
     lines += ['', f"Active today: {len(contacts)}"]
     return '\n'.join(lines)
 
@@ -429,7 +452,7 @@ def main():
 
         company = get_hubspot_company_for_email(email)
         intercom_country = (c.get('location') or {}).get('country')
-        region = classify_region(company, intercom_country)
+        region = classify_region(company, intercom_country, email=email)
         ctype  = classify_type(company)
 
         company_id = None
@@ -473,16 +496,37 @@ def main():
         elif region == 'UK' and ctype == 'Advertiser':
             adv_uk.append(enriched)
         else:
-            unknown.append({**enriched, 'region': region, 'type': ctype})
+            diag = {
+                **enriched,
+                'region': region,
+                'type': ctype,
+                'hs_country': (company or {}).get('country'),
+                'hs_market_office': (company or {}).get('market_office_location'),
+                'hs_owner_id': (company or {}).get('owner_id'),
+                'hs_pipelines': sorted((company or {}).get('deal_pipelines') or []),
+                'hs_publisher_size': (company or {}).get('publisher_size'),
+                'hs_client_type': (company or {}).get('client_type'),
+                'intercom_country': intercom_country,
+                'email_tld_region': _email_tld_region(email),
+            }
+            unknown.append(diag)
 
     write_snapshot(snapshot_rows)
 
     print(f'\nPub AU: {len(pub_au)}  Pub UK: {len(pub_uk)}  Adv AU: {len(adv_au)}  Adv UK: {len(adv_uk)}  Unknown: {len(unknown)}  Skipped(internal): {len(skipped)}')
 
     if unknown:
-        print('\nUnknown (not posted to Slack):')
+        print('\nUnknown (not posted to Slack) — classification diagnostics:')
         for c in unknown:
-            print(f'  - {c["name"]} ({c["email"]}) | {c["company_name"]} | region={c["region"]} type={c["type"]}')
+            print(f'  - {c["name"]} <{c["email"]}>')
+            print(f'      HubSpot company:   {c["company_name"]!r}')
+            print(f'      HubSpot country:   {c["hs_country"]!r}  office: {c["hs_market_office"]!r}')
+            print(f'      HubSpot owner_id:  {c["hs_owner_id"]!r}')
+            print(f'      HubSpot pipelines: {c["hs_pipelines"]}')
+            print(f'      HubSpot publisher_size: {c["hs_publisher_size"]!r}  client_type: {c["hs_client_type"]!r}')
+            print(f'      Intercom country:  {c["intercom_country"]!r}')
+            print(f'      Email TLD region:  {c["email_tld_region"]!r}')
+            print(f'      → classified region={c["region"]} type={c["type"]}')
 
     jobs = [
         (pub_au, PUB_AU_CHANNEL, 'ANZ', 'Publisher',  '\U0001f1e6\U0001f1fa', 'AU'),
@@ -501,7 +545,7 @@ def main():
             else:
                 print(f'Backfill mode ({LOOKBACK_HOURS}h): captured {len(bucket)} {type_label} {region_label} contact(s) to snapshot, skipping Slack post.')
         else:
-            print(f'No {type_label} {region_label} contacts \u2014 skipping')
+            print(f'No {type_label} {region_label} contacts — skipping')
 
 
 if __name__ == '__main__':
