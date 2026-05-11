@@ -79,6 +79,24 @@ Crons are UTC, so local time drifts ±1h with daylight saving — tolerated.
 2. **Enrich** each contact via HubSpot: company name + id, country/office,
    deal pipelines → classify `region` (AU/UK/Unknown) and `type`
    (Publisher/Advertiser/Unknown). Internal emails are skipped.
+
+   **Region priority** (first match wins):
+   1. Domain override (`scripts/classification_overrides.json`, `region` key)
+   2. Intercom IP-based country — primary per-user signal
+   3. Email TLD (`.co.uk`, `.com.au`, etc) — deterministic for country-coded domains
+   4. HubSpot company `country` / `market_office_location` / `hubspot_owner_id` — fallback
+
+   **Type priority** (first match wins):
+   1. Domain override `type` key
+   2. HubSpot deal pipelines (Publisher pipelines vs Advertiser pipelines)
+   3. HubSpot `publisher_size` set → Publisher
+   4. HubSpot `client_type` set and ≠ Direct → Advertiser
+   5. HubSpot owner_id → Publisher/Advertiser owner list
+
+   **Overrides** in `scripts/classification_overrides.json` force the
+   type (always) and optionally a hard region for specific domains.
+   Used for global agencies like Dentsu where one HubSpot record covers
+   multiple regions and has the wrong type tag.
 3. **Compute `logins_today`** per user = current `session_count` minus the
    same user's `session_count` in the previous daily snapshot (or `1` if
    never seen before).

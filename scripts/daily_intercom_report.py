@@ -7,13 +7,13 @@ from datetime import datetime, timezone, timedelta
 
 SNAPSHOT_DIR = Path(__file__).resolve().parent.parent / 'data' / 'snapshots'
 
-# ── Slack channels ───────────────────────────────────────────────────────────────────
+# ── Slack channels ──────────────────────────────────────────────────────────────────────────
 PUB_AU_CHANNEL = 'C090Z7R8516'   # #mediaowner-login-activity-anz
 PUB_UK_CHANNEL = 'C09LCBRPJSK'   # #mediaowner-login-activity-uk
 ADV_AU_CHANNEL = 'C0ATC9AHKN0'   # #advertiser-activity-au
 ADV_UK_CHANNEL = 'C0AU2VB9VNU'   # #advertiser-activity-uk
 
-# ── HubSpot owner IDs for the UK team (region fallback) ────────────────────────────
+# ── HubSpot owner IDs for the UK team (region fallback) ─────────────────────────────────
 UK_OWNER_IDS = {
     358889915,  # Ben Micic
     358889914,  # Tom Gunter
@@ -22,7 +22,7 @@ UK_OWNER_IDS = {
     358889938,  # Madeleine Spicer
 }
 
-# ── Owner-based fallback for region (AU-focused owners) ────────────────────────────
+# ── Owner-based fallback for region (AU-focused owners) ─────────────────────────────────
 AU_OWNER_IDS = {
     79378340,    # Jade Scales (AU Advertiser)
     358889920,   # Daniel Walsh (AU Advertiser)
@@ -33,7 +33,7 @@ AU_OWNER_IDS = {
     # Cindy is AU+UK — excluded (region-ambiguous).
 }
 
-# ── Owner-based fallback for type (only used when pipelines are empty) ───────────────
+# ── Owner-based fallback for type (only used when pipelines are empty) ─────────────────────
 PUBLISHER_OWNER_IDS = {
     358889918,   # Chloe Patterson (AU Publisher)
     75429652,    # Cindy Alexandra (AU+UK Publisher)
@@ -46,7 +46,7 @@ ADVERTISER_OWNER_IDS = {
     358889939,   # Senna Spear
 }
 
-# ── HubSpot deal pipeline IDs ─────────────────────────────────────────────────
+# ── HubSpot deal pipeline IDs ──────────────────────────────────────────────────────
 PUBLISHER_PIPELINES = {
     '930919882',   # Pub SaaS
     '930940349',   # AmpPlus
@@ -286,19 +286,36 @@ def get_domain_override(email):
 
 
 def classify_region(company, intercom_country=None, email=None, override=None):
-    """Return 'AU', 'UK', or 'Unknown'."""
+    """Return 'AU', 'UK', or 'Unknown'.
+
+    Priority order:
+      1. Hard region override (override['region'] == 'AU' or 'UK')
+      2. Intercom IP-based country  ← primary per-user signal
+      3. Email TLD (.co.uk, .com.au, …)  ← deterministic for country-coded domains
+      4. HubSpot company country / office / owner_id  ← fallback
+    """
     override = override or {}
     region_rule = override.get('region')
 
-    # Hard region override (literal 'AU' / 'UK').
+    # Hard region override (literal 'AU' / 'UK') always wins.
     if region_rule in ('AU', 'UK'):
         return region_rule
 
-    # 'from_intercom' = global agency with multi-region offices; skip HubSpot's
-    # company-level country and trust per-user signals (email TLD + Intercom).
-    use_hubspot = region_rule != 'from_intercom'
+    # 1. Intercom country (primary). Per-user, updated each session.
+    if intercom_country:
+        c = intercom_country.lower().strip()
+        if c in AU_VALUES:
+            return 'AU'
+        if c in UK_VALUES:
+            return 'UK'
 
-    if use_hubspot and company:
+    # 2. Email TLD — deterministic for country-coded domains (e.g. amsgroup.co.uk).
+    tld_region = _email_tld_region(email)
+    if tld_region:
+        return tld_region
+
+    # 3. HubSpot company-level signals — fallback when per-user signals are absent.
+    if company:
         country = (company.get('country') or '').lower().strip()
         if country in AU_VALUES:
             return 'AU'
@@ -321,20 +338,6 @@ def classify_region(company, intercom_country=None, email=None, override=None):
                     return 'AU'
             except (ValueError, TypeError):
                 pass
-
-    # Email TLD fallback (e.g. amsgroup.co.uk → UK). Reliable for country-coded TLDs.
-    tld_region = _email_tld_region(email)
-    if tld_region:
-        return tld_region
-
-    # Intercom device location (IP-based) — last resort for everyone, primary
-    # signal for `from_intercom` overrides.
-    if intercom_country:
-        c = intercom_country.lower().strip()
-        if c in AU_VALUES:
-            return 'AU'
-        if c in UK_VALUES:
-            return 'UK'
 
     return 'Unknown'
 
