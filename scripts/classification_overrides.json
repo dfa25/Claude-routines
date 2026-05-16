@@ -1,8 +1,8 @@
 {
-  "_comment": "Per-domain classification overrides. Used by daily_intercom_report.py to force a region or type for specific domains.",
-  "_region_values": "Either 'AU' or 'UK' to hard-force a region. Omit to use the default region chain (Intercom IP -> email TLD -> HubSpot).",
-  "_type_values": "Either 'Publisher' or 'Advertiser'. Hard override — wins over HubSpot pipeline/owner/publisher_size signals.",
-  "_note": "Global agencies (Dentsu, WPP etc) now only need a type override — region falls through to Intercom IP which correctly identifies the user's actual office.",
+  "_comment": "Classification overrides for daily_intercom_report.py. `domains` apply to every email at that domain; `emails` apply to one specific contact. Email-level wins per-key over domain-level when both exist.",
+  "_region_values": "'AU' or 'UK' to hard-force the region. Default chain is HubSpot -> Intercom IP -> email TLD.",
+  "_type_values": "'Publisher' or 'Advertiser'. Wins over HubSpot pipeline/owner/publisher_size signals.",
+  "_note": "Use email-level overrides when one contact at a multi-region agency is in a different office than HubSpot's company record reflects (e.g. Sonya at Dentsu-UK is actually based in AU).",
   "domains": {
     "dentsu.com":         {"type": "Advertiser"},
     "performics.com":     {"type": "Advertiser"},
@@ -11,6 +11,10 @@
     "wpp.com":            {"type": "Advertiser"},
     "omd.com":            {"type": "Advertiser"},
     "publicis.com":       {"type": "Advertiser"},
-    "omnicom.com":        {"type": "Advertiser"}
+    "omnicom.com":        {"type": "Advertiser"},
+    "condenast.com":      {"type": "Publisher"}
+  },
+  "emails": {
+    "sonya.khwanyuen@dentsu.com": {"region": "AU"}
   }
 }
