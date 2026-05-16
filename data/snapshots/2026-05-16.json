@@ -1,0 +1,90 @@
+[
+  {
+    "company_id": null,
+    "company_name": "No company",
+    "created_at": 1730811030,
+    "email": "avidpubsuite@gmail.com",
+    "last_seen_at": 1778906682,
+    "name": "Test Admin",
+    "region": "Unknown",
+    "session_count": 0,
+    "type": "Unknown"
+  },
+  {
+    "company_id": "71109116349",
+    "company_name": "SGC Media",
+    "created_at": 1749097363,
+    "email": "jayde@sgcmedia.com",
+    "last_seen_at": 1778896807,
+    "name": "Jayde Roxborough",
+    "region": "AU",
+    "session_count": 0,
+    "type": "Publisher"
+  },
+  {
+    "company_id": "137820032452",
+    "company_name": "Bauer Media-UK",
+    "created_at": 1778867028,
+    "email": "sheryl.graham@bauermedia.co.uk",
+    "last_seen_at": 1778867124,
+    "name": "Sheryl Graham",
+    "region": "UK",
+    "session_count": 0,
+    "type": "Publisher"
+  },
+  {
+    "company_id": "86404884964",
+    "company_name": "Planet Sport Group-UK",
+    "created_at": 1749087029,
+    "email": "daniel.davies@planetsport.com",
+    "last_seen_at": 1778861315,
+    "name": "Daniel Davies",
+    "region": "UK",
+    "session_count": 0,
+    "type": "Publisher"
+  },
+  {
+    "company_id": "61858812371",
+    "company_name": "The Alliance-UK",
+    "created_at": 1758505486,
+    "email": "alex@the-alliance.co.uk",
+    "last_seen_at": 1778861052,
+    "name": "Alex Newberry",
+    "region": "UK",
+    "session_count": 0,
+    "type": "Publisher"
+  },
+  {
+    "company_id": "61866014146",
+    "company_name": "Haymarket-UK",
+    "created_at": 1769773578,
+    "email": "richard.potton@haymarket.com",
+    "last_seen_at": 1778860108,
+    "name": "Richard Potton",
+    "region": "UK",
+    "session_count": 0,
+    "type": "Publisher"
+  },
+  {
+    "company_id": "162900965853",
+    "company_name": "Performics-AU",
+    "created_at": 1752580302,
+    "email": "ed.fleeman@performics.com",
+    "last_seen_at": 1778858581,
+    "name": "Ed Fleeman",
+    "region": "AU",
+    "session_count": 0,
+    "type": "Advertiser"
+  },
+  {
+    "company_id": "61858812371",
+    "company_name": "The Alliance-UK",
+    "created_at": 1757051010,
+    "email": "jon@the-alliance.co.uk",
+    "last_seen_at": 1778856715,
+    "name": "Jonathan Westbrook",
+    "region": "UK",
+    "session_count": 0,
+    "type": "Publisher"
+  }
+]
