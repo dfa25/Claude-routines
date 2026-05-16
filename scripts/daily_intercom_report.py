@@ -7,13 +7,13 @@ from datetime import datetime, timezone, timedelta
 
 SNAPSHOT_DIR = Path(__file__).resolve().parent.parent / 'data' / 'snapshots'
 
-# ── Slack channels ──────────────────────────────────────────────────────────────────────────
+# ── Slack channels ─────────────────────────────────────────────────────────────────────────────────
 PUB_AU_CHANNEL = 'C090Z7R8516'   # #mediaowner-login-activity-anz
 PUB_UK_CHANNEL = 'C09LCBRPJSK'   # #mediaowner-login-activity-uk
 ADV_AU_CHANNEL = 'C0ATC9AHKN0'   # #advertiser-activity-au
 ADV_UK_CHANNEL = 'C0AU2VB9VNU'   # #advertiser-activity-uk
 
-# ── HubSpot owner IDs for the UK team (region fallback) ─────────────────────────────────
+# ── HubSpot owner IDs for the UK team (region fallback) ────────────────────────────────────
 UK_OWNER_IDS = {
     358889915,  # Ben Micic
     358889914,  # Tom Gunter
@@ -22,7 +22,7 @@ UK_OWNER_IDS = {
     358889938,  # Madeleine Spicer
 }
 
-# ── Owner-based fallback for region (AU-focused owners) ─────────────────────────────────
+# ── Owner-based fallback for region (AU-focused owners) ────────────────────────────────────
 AU_OWNER_IDS = {
     79378340,    # Jade Scales (AU Advertiser)
     358889920,   # Daniel Walsh (AU Advertiser)
@@ -33,7 +33,7 @@ AU_OWNER_IDS = {
     # Cindy is AU+UK — excluded (region-ambiguous).
 }
 
-# ── Owner-based fallback for type (only used when pipelines are empty) ─────────────────────
+# ── Owner-based fallback for type (only used when pipelines are empty) ──────────────────────────────────
 PUBLISHER_OWNER_IDS = {
     358889918,   # Chloe Patterson (AU Publisher)
     75429652,    # Cindy Alexandra (AU+UK Publisher)
@@ -46,7 +46,7 @@ ADVERTISER_OWNER_IDS = {
     358889939,   # Senna Spear
 }
 
-# ── HubSpot deal pipeline IDs ──────────────────────────────────────────────────────
+# ── HubSpot deal pipeline IDs ───────────────────────────────────────────────────────────────
 PUBLISHER_PIPELINES = {
     '930919882',   # Pub SaaS
     '930940349',   # AmpPlus
@@ -63,11 +63,11 @@ ADVERTISER_PIPELINES = {
     't_ecaa8c5142c3c35eb072b4cff1cdb2f8',   # AU Collab Platform - Advertiser Pipeline
 }
 
-# ── Country value sets (lowercase) ───────────────────────────────────────────────
+# ── Country value sets (lowercase) ────────────────────────────────────────────────────────
 AU_VALUES = {'australia', 'au', 'anz', 'aus'}
 UK_VALUES = {'united kingdom', 'uk', 'gb', 'great britain', 'england', 'scotland', 'wales'}
 
-# ── Internal domains to exclude (substring match on domain part) ───────────────────
+# ── Internal domains to exclude (substring match on domain part) ──────────────────────────
 INTERNAL_DOMAIN_SUBSTRINGS = {'avid'}
 
 
@@ -78,7 +78,7 @@ def is_internal_email(email):
     return any(sub in domain for sub in INTERNAL_DOMAIN_SUBSTRINGS)
 
 
-# ── API credentials + region filter ──────────────────────────────────────────────
+# ── API credentials + region filter ────────────────────────────────────────────────────────
 INTERCOM_TOKEN = os.environ['INTERCOM_ACCESS_TOKEN']
 HUBSPOT_TOKEN  = os.environ['HUBSPOT_ACCESS_TOKEN']
 SLACK_TOKEN    = os.environ['SLACK_BOT_TOKEN']
@@ -267,22 +267,39 @@ def _email_tld_region(email):
     return None
 
 
-# Per-domain classification overrides loaded from scripts/classification_overrides.json.
-# Used to fix multi-region agencies that HubSpot models as one record (e.g. dentsu.com
-# users in both AU and UK collapse into a single "Dentsu-UK" record in HubSpot).
+# Per-domain and per-email classification overrides loaded from
+# scripts/classification_overrides.json. Domain-level handles things like
+# "all condenast.com users are Publishers". Email-level handles specific
+# misclassifications like Sonya at Dentsu being AU not UK. Email wins on
+# any key collision (email is more specific).
 _OVERRIDES_PATH = Path(__file__).resolve().parent / 'classification_overrides.json'
 try:
-    _DOMAIN_OVERRIDES = json.loads(_OVERRIDES_PATH.read_text()).get('domains', {})
+    _OVERRIDES_DATA = json.loads(_OVERRIDES_PATH.read_text())
+    _DOMAIN_OVERRIDES = _OVERRIDES_DATA.get('domains', {}) or {}
+    _EMAIL_OVERRIDES  = _OVERRIDES_DATA.get('emails', {})  or {}
 except (OSError, ValueError):
     _DOMAIN_OVERRIDES = {}
+    _EMAIL_OVERRIDES  = {}
 
 
 def get_domain_override(email):
-    """Return the override dict for an email's domain, or {} if none."""
+    """Return the domain-level override for an email, or {}."""
     if not email or '@' not in email:
         return {}
     domain = email.split('@')[-1].lower()
     return _DOMAIN_OVERRIDES.get(domain, {})
+
+
+def get_email_override(email):
+    """Return the email-level override for an exact email, or {}."""
+    if not email:
+        return {}
+    return _EMAIL_OVERRIDES.get(email.lower(), {})
+
+
+def get_override(email):
+    """Return merged override: domain-level + email-level (email wins per key)."""
+    return {**get_domain_override(email), **get_email_override(email)}
 
 
 def classify_region(company, intercom_country=None, email=None, override=None):
@@ -290,9 +307,9 @@ def classify_region(company, intercom_country=None, email=None, override=None):
 
     Priority order:
       1. Hard region override (override['region'] == 'AU' or 'UK')
-      2. Intercom IP-based country  ← primary per-user signal
-      3. Email TLD (.co.uk, .com.au, …)  ← deterministic for country-coded domains
-      4. HubSpot company country / office / owner_id  ← fallback
+      2. HubSpot company country / office / owner_id  ← stable source of truth
+      3. Intercom IP-based country                    ← per-user fallback
+      4. Email TLD (.co.uk, .com.au, …)               ← last resort
     """
     override = override or {}
     region_rule = override.get('region')
@@ -301,20 +318,7 @@ def classify_region(company, intercom_country=None, email=None, override=None):
     if region_rule in ('AU', 'UK'):
         return region_rule
 
-    # 1. Intercom country (primary). Per-user, updated each session.
-    if intercom_country:
-        c = intercom_country.lower().strip()
-        if c in AU_VALUES:
-            return 'AU'
-        if c in UK_VALUES:
-            return 'UK'
-
-    # 2. Email TLD — deterministic for country-coded domains (e.g. amsgroup.co.uk).
-    tld_region = _email_tld_region(email)
-    if tld_region:
-        return tld_region
-
-    # 3. HubSpot company-level signals — fallback when per-user signals are absent.
+    # 1. HubSpot company-level signals — stable, account-ownership-aligned.
     if company:
         country = (company.get('country') or '').lower().strip()
         if country in AU_VALUES:
@@ -338,6 +342,19 @@ def classify_region(company, intercom_country=None, email=None, override=None):
                     return 'AU'
             except (ValueError, TypeError):
                 pass
+
+    # 2. Intercom IP country — per-user fallback when HubSpot is null.
+    if intercom_country:
+        c = intercom_country.lower().strip()
+        if c in AU_VALUES:
+            return 'AU'
+        if c in UK_VALUES:
+            return 'UK'
+
+    # 3. Email TLD (e.g. amsgroup.co.uk → UK). Last resort for country-coded domains.
+    tld_region = _email_tld_region(email)
+    if tld_region:
+        return tld_region
 
     return 'Unknown'
 
@@ -492,7 +509,7 @@ def main():
 
         company = get_hubspot_company_for_email(email)
         intercom_country = (c.get('location') or {}).get('country')
-        override = get_domain_override(email)
+        override = get_override(email)
         region = classify_region(company, intercom_country, email=email, override=override)
         ctype  = classify_type(company, override=override)
 
