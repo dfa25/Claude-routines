@@ -4,7 +4,7 @@
     "company_name": "No company",
     "created_at": 1730811030,
     "email": "avidpubsuite@gmail.com",
-    "last_seen_at": 1778906682,
+    "last_seen_at": 1778922013,
     "name": "Test Admin",
     "region": "Unknown",
     "session_count": 0,
@@ -86,5 +86,27 @@
     "region": "UK",
     "session_count": 0,
     "type": "Publisher"
+  },
+  {
+    "company_id": "164552910314",
+    "company_name": "Australian Community Media (ACM)-AU",
+    "created_at": 1739941425,
+    "email": "melissa.francis@austcommunitymedia.com.au",
+    "last_seen_at": 1778930774,
+    "name": "Melissa Francis",
+    "region": "AU",
+    "session_count": 0,
+    "type": "Publisher"
+  },
+  {
+    "company_id": null,
+    "company_name": "No company",
+    "created_at": 1730094734,
+    "email": "admin@gmail.com",
+    "last_seen_at": 1778923109,
+    "name": "Avid Admin",
+    "region": "Unknown",
+    "session_count": 0,
+    "type": "Unknown"
   }
 ]
