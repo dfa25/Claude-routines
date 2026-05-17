@@ -1,0 +1,24 @@
+[
+  {
+    "company_id": "164552910314",
+    "company_name": "Australian Community Media (ACM)-AU",
+    "created_at": 1739941425,
+    "email": "melissa.francis@austcommunitymedia.com.au",
+    "last_seen_at": 1778979647,
+    "name": "Melissa Francis",
+    "region": "AU",
+    "session_count": 0,
+    "type": "Publisher"
+  },
+  {
+    "company_id": "261746099642",
+    "company_name": "No company",
+    "created_at": 1776236300,
+    "email": "sebastian@nuclearmedia.com.au",
+    "last_seen_at": 1778978010,
+    "name": "Sebastian Hugo",
+    "region": "AU",
+    "session_count": 0,
+    "type": "Publisher"
+  }
+]
