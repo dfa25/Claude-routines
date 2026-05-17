@@ -20,5 +20,27 @@
     "region": "AU",
     "session_count": 0,
     "type": "Publisher"
+  },
+  {
+    "company_id": "201056494052",
+    "company_name": "Mums of the Shire-AU",
+    "created_at": 1774858490,
+    "email": "alhana@mumsoftheshire.com.au",
+    "last_seen_at": 1779009248,
+    "name": "Alhana Alhana",
+    "region": "AU",
+    "session_count": 0,
+    "type": "Publisher"
+  },
+  {
+    "company_id": "61831102917",
+    "company_name": "Starcom-AU-MEL",
+    "created_at": 1778201321,
+    "email": "tessa.mcnaulty@starcomww.com",
+    "last_seen_at": 1778998092,
+    "name": "Tessa Mcnaulty",
+    "region": "AU",
+    "session_count": 0,
+    "type": "Advertiser"
   }
 ]
