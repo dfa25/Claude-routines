@@ -11,6 +11,7 @@ by schedule or events.
 | Email Triage | Mon–Fri 09:00 AEST + ✏️ in #df | #df | Scan Gmail, draft replies, action via reactions |
 | Daily Intercom Report | Daily 12:00 AEST / 12:00 BST | 4 activity channels | Post last-24h logins (unique users + total logins) per region/team; persist daily snapshot |
 | Weekly Login Report | Mon 09:00 AEST (both regions, recap previous Mon–Sun) | 4 activity channels + 2 Notion DBs | Weekly rollup: users, sessions, new vs returning, org penetration |
+| Weekly Notion Update | Mon 09:00 AEST | #growth-insights | Read-only digest of new entries (last 7 days) added to Agency, Publisher + Internal IP databases |
 
 ## Two-phase pattern
 
@@ -156,3 +157,31 @@ workflow** → set *Hours of history to pull* to `720` → Run. Seeds the
 snapshot store with everyone seen in the last 30 days and their current
 `session_count`. Gives the next weekly run an accurate baseline instead
 of estimated.
+
+## Weekly Notion Update
+
+A read-only, single-phase routine (`weekly-notion-update/routine.md`).
+Runs Mon 09:00 AEST via the Notion + Slack MCP connectors and posts a
+digest of everything new added to the Avid Brain databases in the last
+7 days to **#growth-insights**. It only reads Notion and posts to Slack —
+it never writes to, edits, or deletes any Notion content.
+
+### Scope — three areas
+
+| Area | Sub-databases covered |
+|------|----------------------|
+| 🏢 Agency | Interviews · Objections & Talk Tracks · Problems & JTBDs · Feature Requests |
+| 📰 Publisher | Interviews · Problems & JTBDs · Feature Requests |
+| 🤓 Internal IP | Internal IP (IP moments) |
+
+The auto-generated **Agency Logins** / **Publisher Log ins** databases
+are deliberately excluded — they're written by the Weekly Login Report
+routine, not uploaded research.
+
+### Window
+
+- New = page `createdTime` inside the window (not the `Date` property,
+  which can be backdated).
+- Standard lookback is **7 days**. The **first run uses 8 days** (kick-off
+  landed slightly more than 7 days after the last checkpoint). Flip
+  `FIRST_RUN` to false in `routine.md` after the first post.
