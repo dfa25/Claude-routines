@@ -1,15 +1,27 @@
 name: Backfill Weekly Login Rollups (one-off)
 
-# Bare workflow_dispatch with no inputs to force GitHub to surface the
-# Run button. Writes recovered rows into Notion (DRY_RUN=0 hard-coded).
-# The reconciliation logic in the script is identical to the dry run
-# we already verified locally — see commit 92d859b.
+# Two ways to run:
+#  - workflow_dispatch (manual button, if/when GitHub surfaces it)
+#  - push to data/.backfill-trigger  (used to drive the run programmatically;
+#    a path-filtered push trigger only fires when that sentinel file changes,
+#    so ordinary pushes to other files never re-run it)
+#
+# The job runs the backfill in WRITE mode and commits its full output log to
+# data/backfill-result.txt so the outcome can be inspected from the repo
+# without reading Actions logs.
 
 on:
   workflow_dispatch:
+  push:
+    paths:
+      - 'data/.backfill-trigger'
 
 permissions:
-  contents: read
+  contents: write
+
+concurrency:
+  group: backfill-weekly
+  cancel-in-progress: false
 
 jobs:
   backfill:
@@ -20,11 +32,37 @@ jobs:
         with:
           python-version: '3.11'
       - run: pip install -r requirements.txt
-      - name: Run weekly backfill (WRITE mode)
+      - name: Run weekly backfill (WRITE mode) and capture log
         env:
           INTERCOM_ACCESS_TOKEN: ${{ secrets.INTERCOM_ACCESS_TOKEN }}
           HUBSPOT_ACCESS_TOKEN: ${{ secrets.HUBSPOT_ACCESS_TOKEN }}
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           DRY_RUN: '0'
-        run: python scripts/backfill_weekly_from_snapshots.py
+        run: |
+          set -o pipefail
+          mkdir -p data
+          echo "Backfill run started $(date -u +%Y-%m-%dT%H:%M:%SZ)" > data/backfill-result.txt
+          echo "Commit: ${GITHUB_SHA}" >> data/backfill-result.txt
+          echo "----------------------------------------" >> data/backfill-result.txt
+          python scripts/backfill_weekly_from_snapshots.py 2>&1 | tee -a data/backfill-result.txt
+          status=$?
+          echo "----------------------------------------" >> data/backfill-result.txt
+          echo "Exit status: ${status}" >> data/backfill-result.txt
+          echo "Backfill run finished $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> data/backfill-result.txt
+          exit $status
+      - name: Commit result log
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git pull --rebase origin main || true
+          git add data/backfill-result.txt
+          if git diff --staged --quiet; then
+            echo "No log changes to commit."
+          else
+            git commit -m "chore: backfill result log $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            for i in 1 2 3 4; do
+              git push && break || { echo "push retry $i"; sleep $((2**i)); git pull --rebase origin main || true; }
+            done
+          fi
