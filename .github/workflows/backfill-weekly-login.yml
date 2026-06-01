@@ -38,3 +38,5 @@ jobs:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           DRY_RUN: ${{ github.event.inputs.dry_run == 'false' && '0' || '1' }}
         run: python scripts/backfill_weekly_from_snapshots.py
+
+# (re-index nudge: workflow_dispatch trigger registered on default branch `main`)
