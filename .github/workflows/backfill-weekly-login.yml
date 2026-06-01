@@ -4,17 +4,16 @@ name: Backfill Weekly Login Rollups (one-off)
 # 2026-05-31. Re-runs the corrected classification over committed snapshots and
 # upserts the recomputed weekly rows into Notion. Never posts to Slack.
 #
-# Defaults to a dry run (writes nothing). Set the `dry_run` input to false to
-# apply the Notion writes.
+# Mode input: 'dry' (default — prints reconciliation only) or 'write' (upserts
+# the recomputed rows into Notion).
 
 on:
   workflow_dispatch:
     inputs:
-      dry_run:
-        description: 'Dry run (print reconciliation only, no Notion writes)'
-        type: boolean
+      mode:
+        description: "mode: 'dry' (preview only) or 'write' (apply Notion writes)"
         required: false
-        default: true
+        default: 'dry'
 
 permissions:
   contents: read
@@ -36,7 +35,5 @@ jobs:
           HUBSPOT_ACCESS_TOKEN: ${{ secrets.HUBSPOT_ACCESS_TOKEN }}
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
-          DRY_RUN: ${{ github.event.inputs.dry_run == 'false' && '0' || '1' }}
+          DRY_RUN: ${{ github.event.inputs.mode == 'write' && '0' || '1' }}
         run: python scripts/backfill_weekly_from_snapshots.py
-
-# (re-index nudge: workflow_dispatch trigger registered on default branch `main`)
