@@ -7,13 +7,13 @@ from datetime import datetime, timezone, timedelta
 
 SNAPSHOT_DIR = Path(__file__).resolve().parent.parent / 'data' / 'snapshots'
 
-# ── Slack channels ─────────────────────────────────────────────────────────────────────────────────
+# ── Slack channels ─────────────────────────────────────────────────────────────────────────────────────
 PUB_AU_CHANNEL = 'C090Z7R8516'   # #mediaowner-login-activity-anz
 PUB_UK_CHANNEL = 'C09LCBRPJSK'   # #mediaowner-login-activity-uk
 ADV_AU_CHANNEL = 'C0ATC9AHKN0'   # #advertiser-activity-au
 ADV_UK_CHANNEL = 'C0AU2VB9VNU'   # #advertiser-activity-uk
 
-# ── HubSpot owner IDs for the UK team (region fallback) ────────────────────────────────────
+# ── HubSpot owner IDs for the UK team (region fallback) ─────────────────────────────────────
 UK_OWNER_IDS = {
     358889915,  # Ben Micic
     358889914,  # Tom Gunter
@@ -22,7 +22,7 @@ UK_OWNER_IDS = {
     358889938,  # Madeleine Spicer
 }
 
-# ── Owner-based fallback for region (AU-focused owners) ────────────────────────────────────
+# ── Owner-based fallback for region (AU-focused owners) ─────────────────────────────────────
 AU_OWNER_IDS = {
     79378340,    # Jade Scales (AU Advertiser)
     358889920,   # Daniel Walsh (AU Advertiser)
@@ -250,7 +250,7 @@ def get_hubspot_company_for_email(email):
 # ─────────────────────────────────────────────────────────────────────────────
 
 # Email TLD → region fallback (last-resort signal when HubSpot/Intercom don't classify).
-UK_TLDS = ('.co.uk', '.uk', '.gb')
+UK_TLDS = ('.co.uk', '.uk', '.gb', '.london')
 AU_TLDS = ('.com.au', '.net.au', '.org.au', '.au')
 
 
@@ -409,13 +409,23 @@ def classify_type(company, override=None):
 
 def format_message(contacts, region_label, type_label, flag):
     today = datetime.now(timezone.utc).strftime('%d %b %Y')
+    classified = [c for c in contacts if not c.get('needs_classification')]
+    triage     = [c for c in contacts if c.get('needs_classification')]
+
     lines = [
         f"{flag} *{type_label} Logins – Last 24 Hours ({region_label})* │ {today}",
         '─' * 44,
     ]
-    for c in contacts:
+    for c in classified:
         lines.append(f"• *{c['name']}* │ {c['email']}")
         lines.append(f"  Company: {c['company_name']} │ Last seen: {c['last_seen_str']}")
+
+    if triage:
+        lines += ['', f"🔍 *Type unclear — needs HubSpot classification ({len(triage)}):*"]
+        for c in triage:
+            lines.append(f"• *{c['name']}* │ {c['email']}")
+            lines.append(f"  Company: {c['company_name']} │ Last seen: {c['last_seen_str']}")
+
     lines += ['', f"Active today: {len(contacts)}"]
     return '\n'.join(lines)
 
@@ -553,6 +563,13 @@ def main():
             adv_au.append(enriched)
         elif region == 'UK' and ctype == 'Advertiser':
             adv_uk.append(enriched)
+        elif region in ('AU', 'UK') and ctype == 'Unknown':
+            # Region known but type couldn't be classified. Route to the Publisher
+            # channel of that region with a triage tag instead of silently dropping
+            # — publishers dominate the unclassified bucket, the tag makes intent
+            # clear, and the Advertiser channel stays clean.
+            enriched['needs_classification'] = True
+            (pub_au if region == 'AU' else pub_uk).append(enriched)
         else:
             diag = {
                 **enriched,
