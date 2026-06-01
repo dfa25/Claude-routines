@@ -1,0 +1,40 @@
+name: Backfill Weekly Login Rollups (one-off)
+
+# Manually-triggered recovery of the contacts dropped between 2026-05-15 and
+# 2026-05-31. Re-runs the corrected classification over committed snapshots and
+# upserts the recomputed weekly rows into Notion. Never posts to Slack.
+#
+# Defaults to a dry run (writes nothing). Set the `dry_run` input to false to
+# apply the Notion writes.
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run (print reconciliation only, no Notion writes)'
+        type: boolean
+        required: false
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -r requirements.txt
+      - name: Run weekly backfill
+        env:
+          # All four are read at module import time by the reused scripts,
+          # even though this job never posts to Slack.
+          INTERCOM_ACCESS_TOKEN: ${{ secrets.INTERCOM_ACCESS_TOKEN }}
+          HUBSPOT_ACCESS_TOKEN: ${{ secrets.HUBSPOT_ACCESS_TOKEN }}
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          DRY_RUN: ${{ github.event.inputs.dry_run == 'false' && '0' || '1' }}
+        run: python scripts/backfill_weekly_from_snapshots.py

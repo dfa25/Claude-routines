@@ -149,10 +149,33 @@ Crons are UTC, so local time drifts ±1h with daylight saving — tolerated.
 - `SLACK_BOT_TOKEN`
 - `NOTION_TOKEN` (weekly only; integration must be shared with both Notion DBs)
 
-### Backfill
+### Backfill — snapshot history
 
 One-off: Actions tab → **Daily New User Report — AU** (or UK) → **Run
 workflow** → set *Hours of history to pull* to `720` → Run. Seeds the
 snapshot store with everyone seen in the last 30 days and their current
 `session_count`. Gives the next weekly run an accurate baseline instead
 of estimated.
+
+### Backfill — recover dropped contacts into Notion
+
+`scripts/backfill_weekly_from_snapshots.py` recovers contacts that were
+silently dropped (`type=Unknown`) before the classification fix
+(commit `27d2e82`). It replays the corrected classification — domain/email
+overrides, `.london` TLD, and the type-Unknown → Publisher fallback — over
+the already-committed daily snapshots and upserts the recomputed weekly rows
+into the two Notion DBs. It imports the production `aggregate_users`,
+`rollup_by_org` and `upsert_user_rows` so it can't drift from the live job,
+makes no HubSpot re-calls (snapshots already carry the HubSpot-derived
+region/type), is idempotent on `Email + Week of`, and never posts to Slack.
+
+Run it via Actions tab → **Backfill Weekly Login Rollups (one-off)** → **Run
+workflow**. Leave *Dry run* ticked first to see the per-week reconciliation in
+the logs; untick it to apply the Notion writes. Locally:
+
+```bash
+DRY_RUN=1 python scripts/backfill_weekly_from_snapshots.py   # preview
+```
+
+Scope: the three Mon–Sun weeks overlapping 2026-05-15 .. 2026-05-31
+(`week_of` 2026-05-11, 2026-05-18, 2026-05-25).
