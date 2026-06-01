@@ -1,27 +1,27 @@
 name: Backfill Weekly Login Rollups (one-off)
 
-# Two ways to run:
-#  - workflow_dispatch (manual button, if/when GitHub surfaces it)
-#  - push to data/.backfill-trigger  (used to drive the run programmatically;
-#    a path-filtered push trigger only fires when that sentinel file changes,
-#    so ordinary pushes to other files never re-run it)
+# One-off recovery of contacts dropped between 2026-05-15 and 2026-05-31.
+# Already executed successfully on 2026-06-01 (see data/backfill-result.txt:
+# 63 rows recovered into the two Notion DBs, exit 0, 0 upsert failures).
 #
-# The job runs the backfill in WRITE mode and commits its full output log to
-# data/backfill-result.txt so the outcome can be inspected from the repo
-# without reading Actions logs.
+# Kept dispatch-only for the record / future re-runs. To re-run: pick a mode
+# ('dry' to preview, 'write' to apply). The script is idempotent on
+# Email + Week of, so re-running never duplicates rows.
+#
+# (The earlier push-on-sentinel trigger was a one-off workaround to drive the
+# run when the Actions UI wouldn't surface the dispatch button; removed here so
+# nothing writes to Notion automatically on a file push.)
 
 on:
   workflow_dispatch:
-  push:
-    paths:
-      - 'data/.backfill-trigger'
+    inputs:
+      mode:
+        description: "mode: 'dry' (preview only) or 'write' (apply Notion writes)"
+        required: false
+        default: 'dry'
 
 permissions:
-  contents: write
-
-concurrency:
-  group: backfill-weekly
-  cancel-in-progress: false
+  contents: read
 
 jobs:
   backfill:
@@ -32,37 +32,11 @@ jobs:
         with:
           python-version: '3.11'
       - run: pip install -r requirements.txt
-      - name: Run weekly backfill (WRITE mode) and capture log
+      - name: Run weekly backfill
         env:
           INTERCOM_ACCESS_TOKEN: ${{ secrets.INTERCOM_ACCESS_TOKEN }}
           HUBSPOT_ACCESS_TOKEN: ${{ secrets.HUBSPOT_ACCESS_TOKEN }}
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
-          DRY_RUN: '0'
-        run: |
-          set -o pipefail
-          mkdir -p data
-          echo "Backfill run started $(date -u +%Y-%m-%dT%H:%M:%SZ)" > data/backfill-result.txt
-          echo "Commit: ${GITHUB_SHA}" >> data/backfill-result.txt
-          echo "----------------------------------------" >> data/backfill-result.txt
-          python scripts/backfill_weekly_from_snapshots.py 2>&1 | tee -a data/backfill-result.txt
-          status=$?
-          echo "----------------------------------------" >> data/backfill-result.txt
-          echo "Exit status: ${status}" >> data/backfill-result.txt
-          echo "Backfill run finished $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> data/backfill-result.txt
-          exit $status
-      - name: Commit result log
-        if: always()
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git pull --rebase origin main || true
-          git add data/backfill-result.txt
-          if git diff --staged --quiet; then
-            echo "No log changes to commit."
-          else
-            git commit -m "chore: backfill result log $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-            for i in 1 2 3 4; do
-              git push && break || { echo "push retry $i"; sleep $((2**i)); git pull --rebase origin main || true; }
-            done
-          fi
+          DRY_RUN: ${{ github.event.inputs.mode == 'write' && '0' || '1' }}
+        run: python scripts/backfill_weekly_from_snapshots.py
