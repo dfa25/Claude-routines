@@ -96,8 +96,20 @@ def main():
     if not matches:
         print('  No contact found.')
         return
-    contact_id = matches[0]['id']
+    contact = matches[0]
+    contact_id = contact['id']
     print(f'  Contact id: {contact_id}\n')
+
+    # Region signals — what the daily classifier would see from Intercom.
+    print('== Region signals (Intercom) ==')
+    print(f"  name:             {contact.get('name')!r}")
+    print(f"  email:            {contact.get('email')!r}")
+    loc = contact.get('location') or {}
+    print(f"  location.country: {loc.get('country')!r}")
+    print(f"  location.region:  {loc.get('region')!r}")
+    print(f"  location.city:    {loc.get('city')!r}")
+    print(f"  os / browser:     {contact.get('os')!r} / {contact.get('browser')!r}")
+    print()
 
     per_version = {}
     for version in VERSIONS_TO_TRY:
