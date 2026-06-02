@@ -11,6 +11,9 @@ on:
         description: 'Session count to hunt for in the JSON response (from the Intercom UI)'
         required: false
         default: '48'
+  push:
+    paths:
+      - 'data/.debug-trigger'
 
 permissions:
   contents: read
@@ -27,6 +30,15 @@ jobs:
       - name: Inspect Intercom contact
         env:
           INTERCOM_ACCESS_TOKEN: ${{ secrets.INTERCOM_ACCESS_TOKEN }}
-          DEBUG_EMAIL: ${{ github.event.inputs.email }}
+          # On manual dispatch use the input; on push read the email from the
+          # first line of the sentinel file so the lookup can be driven by a commit.
+          DISPATCH_EMAIL: ${{ github.event.inputs.email }}
           EXPECTED_SESSION_COUNT: ${{ github.event.inputs.expected_session_count }}
-        run: python scripts/debug_intercom_contact.py
+        run: |
+          if [ -n "${DISPATCH_EMAIL}" ]; then
+            export DEBUG_EMAIL="${DISPATCH_EMAIL}"
+          else
+            export DEBUG_EMAIL="$(head -n1 data/.debug-trigger | tr -d '[:space:]')"
+          fi
+          echo "Looking up: ${DEBUG_EMAIL}"
+          python scripts/debug_intercom_contact.py
