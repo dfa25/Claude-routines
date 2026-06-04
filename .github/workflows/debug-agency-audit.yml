@@ -1,0 +1,28 @@
+name: Debug — Agency company audit
+
+# Read-only audit of agency company records across all type=Advertiser domains.
+# Fires on push to data/.debug-audit-trigger (or manual dispatch). Results in
+# the job logs.
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'data/.debug-audit-trigger'
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -r requirements.txt
+      - name: Run agency audit
+        env:
+          HUBSPOT_ACCESS_TOKEN: ${{ secrets.HUBSPOT_ACCESS_TOKEN }}
+        run: python scripts/audit_agency_companies.py
