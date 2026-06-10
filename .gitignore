@@ -2,3 +2,9 @@ __pycache__/
 *.pyc
 .venv/
 .env
+
+# Customer data — relocated to the private dfa25/Claude-routines-data repo,
+# checked out at _data/ in CI. Never commit these to this public repo.
+/data/snapshots/
+/scripts/classification_overrides.json
+/_data/

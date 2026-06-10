@@ -1,14 +1,10 @@
 name: Debug — Agency company audit
 
 # Read-only audit of agency company records across all type=Advertiser domains.
-# Fires on push to data/.debug-audit-trigger (or manual dispatch). Results in
-# the job logs.
+# Manual dispatch only. Results in the job logs.
 
 on:
   workflow_dispatch:
-  push:
-    paths:
-      - 'data/.debug-audit-trigger'
 
 permissions:
   contents: read
@@ -18,6 +14,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Checkout private data store
+        uses: actions/checkout@v4
+        with:
+          repository: dfa25/Claude-routines-data
+          ssh-key: ${{ secrets.DATA_REPO_SSH_KEY }}
+          path: _data
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -25,4 +27,5 @@ jobs:
       - name: Run agency audit
         env:
           HUBSPOT_ACCESS_TOKEN: ${{ secrets.HUBSPOT_ACCESS_TOKEN }}
+          OVERRIDES_PATH: ${{ github.workspace }}/_data/classification_overrides.json
         run: python scripts/audit_agency_companies.py

@@ -14,6 +14,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Checkout private data store
+        uses: actions/checkout@v4
+        with:
+          repository: dfa25/Claude-routines-data
+          ssh-key: ${{ secrets.DATA_REPO_SSH_KEY }}
+          path: _data
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -24,4 +30,5 @@ jobs:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           REGION: AU
+          SNAPSHOT_DIR: ${{ github.workspace }}/_data/snapshots
         run: python scripts/weekly_login_report.py

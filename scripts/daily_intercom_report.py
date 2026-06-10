@@ -5,7 +5,7 @@ from pathlib import Path
 import requests
 from datetime import datetime, timezone, timedelta
 
-SNAPSHOT_DIR = Path(__file__).resolve().parent.parent / 'data' / 'snapshots'
+SNAPSHOT_DIR = Path(os.environ.get('SNAPSHOT_DIR', str(Path(__file__).resolve().parent.parent / 'data' / 'snapshots')))
 
 # ── Slack channels ─────────────────────────────────────────────────────────────────────────────────────
 PUB_AU_CHANNEL = 'C090Z7R8516'   # #mediaowner-login-activity-anz
@@ -272,7 +272,7 @@ def _email_tld_region(email):
 # "all condenast.com users are Publishers". Email-level handles specific
 # misclassifications like Sonya at Dentsu being AU not UK. Email wins on
 # any key collision (email is more specific).
-_OVERRIDES_PATH = Path(__file__).resolve().parent / 'classification_overrides.json'
+_OVERRIDES_PATH = Path(os.environ.get('OVERRIDES_PATH', str(Path(__file__).resolve().parent / 'classification_overrides.json')))
 try:
     _OVERRIDES_DATA = json.loads(_OVERRIDES_PATH.read_text())
     _DOMAIN_OVERRIDES = _OVERRIDES_DATA.get('domains', {}) or {}

@@ -19,7 +19,7 @@ from pathlib import Path
 import requests
 
 ROOT = Path(__file__).resolve().parent.parent
-SNAPSHOT_DIR = ROOT / 'data' / 'snapshots'
+SNAPSHOT_DIR = Path(os.environ.get('SNAPSHOT_DIR', str(ROOT / 'data' / 'snapshots')))
 
 # ── Slack channels (mirror daily_intercom_report.py) ─────────────────────────
 PUB_AU_CHANNEL = 'C090Z7R8516'

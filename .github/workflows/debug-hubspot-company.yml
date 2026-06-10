@@ -1,8 +1,7 @@
 name: Debug — HubSpot company lookup
 
-# Fires on push to data/.debug-hubspot-trigger. First line of the sentinel is
-# the company-name search term (CONTAINS_TOKEN); optional second line is an
-# email domain to query exactly. Reads HubSpot via the existing
+# Manual dispatch: provide a company-name search term (CONTAINS_TOKEN) and an
+# optional exact email domain. Reads HubSpot via the existing
 # HUBSPOT_ACCESS_TOKEN secret; results in the job logs.
 
 on:
@@ -16,9 +15,6 @@ on:
         description: 'Optional: exact email domain to look up'
         required: false
         default: ''
-  push:
-    paths:
-      - 'data/.debug-hubspot-trigger'
 
 permissions:
   contents: read
@@ -38,13 +34,8 @@ jobs:
           DISPATCH_NAME: ${{ github.event.inputs.name }}
           DISPATCH_DOMAIN: ${{ github.event.inputs.domain }}
         run: |
-          if [ -n "${DISPATCH_NAME}" ]; then
-            export HS_QUERY_NAME="${DISPATCH_NAME}"
-            export HS_QUERY_DOMAIN="${DISPATCH_DOMAIN}"
-          else
-            export HS_QUERY_NAME="$(sed -n '1p' data/.debug-hubspot-trigger | tr -d '[:space:]')"
-            export HS_QUERY_DOMAIN="$(sed -n '2p' data/.debug-hubspot-trigger | tr -d '[:space:]')"
-          fi
+          export HS_QUERY_NAME="${DISPATCH_NAME}"
+          export HS_QUERY_DOMAIN="${DISPATCH_DOMAIN}"
           echo "Name query:   ${HS_QUERY_NAME}"
           echo "Domain query: ${HS_QUERY_DOMAIN}"
           python scripts/debug_hubspot_company.py

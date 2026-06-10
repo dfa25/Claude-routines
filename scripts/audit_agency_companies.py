@@ -26,7 +26,7 @@ HUBSPOT_TOKEN = os.environ['HUBSPOT_ACCESS_TOKEN']
 HEADERS = {'Authorization': f'Bearer {HUBSPOT_TOKEN}', 'Content-Type': 'application/json'}
 PROPS = ['name', 'country', 'market_office_location', 'hubspot_owner_id', 'domain']
 
-OVERRIDES = json.loads((Path(__file__).resolve().parent / 'classification_overrides.json').read_text())
+OVERRIDES = json.loads(Path(os.environ.get('OVERRIDES_PATH', str(Path(__file__).resolve().parent / 'classification_overrides.json'))).read_text())
 AGENCY_DOMAINS = [d for d, v in OVERRIDES.get('domains', {}).items()
                   if v.get('type') == 'Advertiser']
 

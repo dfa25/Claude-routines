@@ -11,7 +11,7 @@ on:
         default: '24'
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: intercom-snapshots
@@ -22,6 +22,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Checkout private data store
+        uses: actions/checkout@v4
+        with:
+          repository: dfa25/Claude-routines-data
+          ssh-key: ${{ secrets.DATA_REPO_SSH_KEY }}
+          path: _data
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -33,18 +39,20 @@ jobs:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
           REGION: UK
           LOOKBACK_HOURS: ${{ github.event.inputs.lookback_hours || '24' }}
+          SNAPSHOT_DIR: ${{ github.workspace }}/_data/snapshots
+          OVERRIDES_PATH: ${{ github.workspace }}/_data/classification_overrides.json
         run: python scripts/daily_intercom_report.py
-      - name: Commit daily snapshot
+      - name: Persist snapshot to private data store
+        working-directory: _data
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git pull --rebase origin ${{ github.ref_name }} || true
-          git add data/snapshots/
+          git add snapshots/
           if git diff --staged --quiet; then
             echo "No snapshot changes to commit."
           else
             git commit -m "chore: daily Intercom snapshot (UK) $(date -u +%Y-%m-%d)"
             for i in 1 2 3 4; do
-              git push && break || { echo "push failed, retry $i"; sleep $((2**i)); git pull --rebase origin ${{ github.ref_name }} || true; }
+              git push && break || { echo "push failed, retry $i"; sleep $((2**i)); git pull --rebase || true; }
             done
           fi
