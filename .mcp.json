@@ -1,12 +1,3 @@
 {
-  "mcpServers": {
-    "asana": {
-      "type": "http",
-      "url": "https://mcp.asana.com/sse"
-    },
-    "slack": {
-      "type": "http",
-      "url": "https://mcp.slack.com/mcp"
-    }
-  }
+  "mcpServers": {}
 }
