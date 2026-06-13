@@ -114,8 +114,7 @@ GLOBAL RULES
 
 • Only operate on today's review thread, never older threads.
 • Skip tasks already complete in Asana.
-• If Asana connector unavailable, reply "Asana unavailable —
-  retry after reconnection" and stop. Never fabricate success.
+• If Asana connector unavailable: write the current datetime to `triggers/phase2-execute.txt` via GitHub MCP, commit to main with message `chore: trigger phase 2 [datetime]`, reply "🚀 Phase 2 triggered via GitHub Actions — tasks will be updated in #df shortly." and stop.
 • If a task has no suggested date AND no reaction, list under
   "Skipped — needs your decision".
 • Post summary only after all Asana calls return success.
@@ -126,10 +125,8 @@ GLOBAL RULES
   explicit @Claude instructions.
 • All user-facing dates in Slack use format "Ddd DD Mon"
   (e.g. "Mon 20 Apr"). When calling the Asana API, always
-  use ISO "YYYY-MM-DD" for the due_on field.
-• Never write scripts, open PRs, or create repo files in
-  response to 🚀. Phase 2 runs entirely through the Asana
-  and Slack MCP connectors in the active session.
+  • Never open PRs or create new scripts. Exception: updating `triggers/phase2-execute.txt` via GitHub MCP is the approved fallback when Asana/Slack connectors are unavailable.
+
 
 ───────────────────────────────────────────────────
 DAILY EMAIL TRIAGE ROUTINE

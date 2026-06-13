@@ -1,0 +1,25 @@
+name: Asana Review Phase 2
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'triggers/phase2-execute.txt'
+  workflow_dispatch:
+
+jobs:
+  execute:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Run Phase 2
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          ASANA_PAT: ${{ secrets.ASANA_PAT }}
+        run: python scripts/phase2_asana_review.py
