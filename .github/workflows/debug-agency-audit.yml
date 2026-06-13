@@ -17,7 +17,7 @@ jobs:
       - name: Checkout private data store
         uses: actions/checkout@v4
         with:
-          repository: dfa25/Claude-routines-data
+          repository: dfa25/avid-routines-data
           ssh-key: ${{ secrets.DATA_REPO_SSH_KEY }}
           path: _data
       - uses: actions/setup-python@v5
