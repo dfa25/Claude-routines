@@ -83,13 +83,18 @@ def asana_update(task_gid, payload):
     return r.json()["data"]
 
 
-def find_todays_review_thread():
-    """Return thread_ts for today's Daily Asana Review post in #df."""
-    today_start = datetime.combine(date.today(), datetime.min.time()).timestamp()
+def find_latest_review_thread(lookback_days=3):
+    """Return thread_ts for the most recent Daily Asana Review post in #df
+    within the last `lookback_days` days. Looking back rather than only at
+    today lets a weekend or next-morning :rocket: still find the latest
+    review (e.g. Friday's review actioned on Saturday or Monday morning).
+    conversations.history returns newest-first, so the first match is the
+    most recent review."""
+    oldest = (datetime.now() - timedelta(days=lookback_days)).timestamp()
     resp = slack_get(
         "conversations.history",
         channel=CHANNEL_ID,
-        oldest=str(today_start),
+        oldest=str(oldest),
         limit=100,
     )
     for msg in resp.get("messages", []):
@@ -145,9 +150,9 @@ def main():
     today = date.today()
     print(f"Phase 2 executing for {today}")
 
-    thread_ts = find_todays_review_thread()
+    thread_ts = find_latest_review_thread()
     if not thread_ts:
-        msg = "Could not find today's review thread in #df. Nothing to execute."
+        msg = "Could not find a recent review thread in #df (last 3 days). Nothing to execute."
         print(f"ERROR: {msg}")
         slack_post_msg({"channel": CHANNEL_ID, "text": f":warning: Phase 2 failed: {msg}"})
         sys.exit(1)
