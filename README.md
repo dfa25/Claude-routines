@@ -1,4 +1,4 @@
-# Claude Routines
+# Avid Routines
 
 Personal automation routines running in Claude, triggered 
 by schedule or events.
