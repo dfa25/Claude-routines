@@ -73,9 +73,9 @@ PHASE 2 — BULK EXECUTION (on 🚀 in #df)
 TRIGGER: User posts 🚀 in #df (standalone, reaction
 on the review, or @mention).
 
-EXECUTE DIRECTLY VIA MCP TOOLS. DO NOT WRITE SCRIPTS, DO NOT
-OPEN PULL REQUESTS, DO NOT CREATE FILES. USE THE ASANA AND
-SLACK MCP CONNECTORS IN THIS SESSION.
+BEFORE DOING ANYTHING: Verify you can read Slack thread reactions (you need the Slack MCP or equivalent tool). If you cannot read reactions from the #df thread, write the current datetime to `triggers/phase2-execute.txt` via GitHub MCP, commit to main with message `chore: trigger phase 2 [datetime]`, reply "🚀 Phase 2 triggered via GitHub Actions — tasks will be updated in #df shortly." and STOP.
+
+If you CAN read reactions: execute directly via MCP tools. Do not write scripts or open PRs.
 
 1. Read today's review thread you posted.
 
