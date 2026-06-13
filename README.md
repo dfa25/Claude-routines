@@ -38,16 +38,19 @@ conflicts between routines in the same channel.
 
 ## Repo structure
 
-Each routine lives in its own folder:
-- `routine.md` — full prompt pasted into Claude
-- `CHANGELOG.md` — log of every tweak and why
+- `CLAUDE.md` — the full prompts for the Asana Review and
+  Email Triage routines (the source Claude reads)
+- `scripts/` + `.github/workflows/` — the Intercom/login
+  reporting pipeline
+- `asana-review/` + `email-triage/` — each holds a
+  `CHANGELOG.md` (log of every tweak and why)
 
 ## How to update a routine
 
-1. Edit `routine.md` in this repo first
+1. Edit the routine's prompt in `CLAUDE.md` first
 2. Copy the updated prompt into the Claude routine
-3. Log the change in `CHANGELOG.md` with today's date
-   and the reason
+3. Log the change in the routine's `CHANGELOG.md` with
+   today's date and the reason
 
 ## Principles
 
